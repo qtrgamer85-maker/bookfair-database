@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Unregistered Books List</title>
+<!-- SheetJS for Excel export — loaded from CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+:root{
+  --maroon: #6d1a2a;
+  --maroon-dark: #4e1220;
+  --maroon-light: #8b2236;
+  --gold: #c9a84c;
+  --gold-light: #e2c97e;
+  --gold-pale: #fdf6e3;
+  --white: #ffffff;
+  --bg: #f8f5f0;
+  --border: #e0d5c5;
+  --text: #1c1212;
+  --muted: #7a6a5a;
+  --faint: #b0a090;
+}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Segoe UI",sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  padding-bottom:env(safe-area-inset-bottom,20px);
+}
+body[dir="rtl"]{font-family:"Helvetica Neue","Segoe UI",Arial,sans-serif}
+
+/* ── HEADER ── */
+.hdr{
+  background:var(--maroon);
+  color:var(--white);
+  padding:16px 16px 14px;
+  padding-top:calc(16px + env(safe-area-inset-top,0px));
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 12px rgba(0,0,0,.3);
+  border-bottom:3px solid var(--gold);
+}
+.hdr-left{display:flex;align-items:center;gap:12px}
+.hdr-logo{
+  width:42px;height:42px;
+  background:var(--gold);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;
+}
+.hdr-title{font-size:15px;font-weight:700;line-height:1.3}
+.hdr-sub{font-size:11px;opacity:.8;margin-top:2px}
+.hdr-btns{display:flex;gap:8px;flex-shrink:0}
+.hdr-btn{
+  background:var(--gold);color:var(--maroon-dark);
+  border:none;border-radius:8px;
+  padding:8px 12px;font-size:12px;font-weight:700;
+  cursor:pointer;white-space:nowrap;
+}
+.hdr-btn:active{opacity:.8}
+.lang-btn{
+  background:rgba(255,255,255,.15);color:var(--white);
+  border:1.5px solid rgba(255,255,255,.4);border-radius:8px;
+  padding:8px 12px;font-size:12px;font-weight:700;
+  cursor:pointer;white-space:nowrap;
+}
+
+
+
+/* ── MAIN APP ── */
+#mainApp{display:none}
+
+/* ── STATUS BAR ── */
+.status-bar{
+  background:var(--white);
+  border-bottom:1px solid var(--border);
+  padding:8px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:12px;color:var(--muted);
+}
+.s-dot{width:7px;height:7px;border-radius:50%;background:#34c759;display:inline-block;margin-inline-end:6px;vertical-align:middle;flex-shrink:0}
+.s-dot.saving{background:var(--gold)}
+.s-dot.error{background:#ff3b30}
+.total-badge{
+  background:var(--gold-pale);color:var(--maroon);
+  border:1px solid var(--gold-light);
+  border-radius:99px;padding:2px 10px;
+  font-size:11px;font-weight:700;
+}
+
+/* ── ADD ENTRY FORM ── */
+.form-card{
+  background:var(--white);
+  border-bottom:1px solid var(--border);
+  padding:16px;
+}
+.form-title{
+  font-size:13px;font-weight:700;color:var(--maroon);
+  margin-bottom:12px;
+  display:flex;align-items:center;gap:6px;
+}
+.form-title::before{content:"";display:inline-block;width:3px;height:16px;background:var(--gold);border-radius:2px}
+.form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+@media(max-width:500px){.form-grid{grid-template-columns:1fr}}
+.form-field label{
+  display:block;font-size:11px;font-weight:600;
+  color:var(--muted);margin-bottom:4px;
+}
+.form-field input{
+  width:100%;
+  border:1.5px solid var(--border);
+  background:var(--bg);color:var(--text);
+  border-radius:8px;padding:10px 12px;
+  font-size:15px;outline:none;
+  transition:border-color .15s;
+}
+.form-field input:focus{border-color:var(--maroon)}
+.form-field input.err{border-color:#ff3b30;background:#fff5f5}
+.form-field input::placeholder{color:var(--faint)}
+.form-actions{
+  display:flex;gap:8px;margin-top:12px;
+}
+.submit-btn{
+  flex:1;background:var(--maroon);color:var(--white);
+  border:none;border-radius:10px;padding:12px;
+  font-size:14px;font-weight:700;cursor:pointer;
+}
+.submit-btn:active{background:var(--maroon-dark)}
+.clear-btn{
+  background:var(--bg);color:var(--muted);
+  border:1.5px solid var(--border);border-radius:10px;
+  padding:12px 16px;font-size:14px;font-weight:600;cursor:pointer;
+}
+
+/* ── TABLE ── */
+.table-wrap{padding:16px}
+.table-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;flex-wrap:wrap;gap:8px;
+}
+.table-label{font-size:13px;font-weight:700;color:var(--maroon)}
+.export-btn{
+  background:var(--gold);color:var(--maroon-dark);
+  border:none;border-radius:8px;
+  padding:8px 14px;font-size:12px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;gap:5px;
+}
+.export-btn:active{opacity:.8}
+
+.tbl-container{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+thead tr{background:var(--maroon)}
+thead th{
+  color:var(--white);padding:10px 12px;
+  text-align:start;font-weight:600;font-size:12px;
+  white-space:nowrap;
+}
+thead th:last-child{width:48px;text-align:center}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:nth-child(even){background:var(--gold-pale)}
+tbody tr:hover{background:#f0e8d8}
+tbody td{padding:10px 12px;color:var(--text);vertical-align:middle}
+tbody td:last-child{text-align:center}
+.del-row{
+  background:none;border:none;color:#cc3333;
+  font-size:16px;cursor:pointer;padding:4px 8px;border-radius:6px;
+}
+.del-row:active{background:#fff0f0}
+
+.empty-table{
+  text-align:center;padding:48px 20px;color:var(--faint);
+}
+.empty-table .ei{font-size:40px;margin-bottom:10px}
+.empty-table p{font-size:14px;line-height:1.7}
+
+
+/* ── DUPLICATE MODAL ── */
+.dup-modal-bg{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;padding:20px;
+}
+.dup-modal-bg.open{display:flex}
+.dup-modal{
+  background:var(--white);
+  border-radius:20px;
+  padding:32px 24px;
+  max-width:340px;width:100%;
+  text-align:center;
+  box-shadow:0 8px 40px rgba(0,0,0,.3);
+  border-top:6px solid #cc2222;
+}
+.dup-x{
+  font-size:72px;line-height:1;
+  color:#cc2222;margin-bottom:8px;
+  display:block;
+}
+.dup-title{
+  font-size:20px;font-weight:800;
+  color:#cc2222;margin-bottom:8px;
+}
+.dup-sub{
+  font-size:14px;color:var(--muted);
+  line-height:1.6;margin-bottom:6px;
+}
+.dup-isbn{
+  font-size:15px;font-weight:700;
+  color:var(--maroon);margin-bottom:20px;
+  font-family:monospace;
+}
+.dup-close{
+  background:var(--maroon);color:var(--white);
+  border:none;border-radius:12px;
+  padding:13px 32px;font-size:15px;font-weight:700;
+  cursor:pointer;width:100%;
+}
+.dup-close:active{background:var(--maroon-dark)}
+
+/* ── TOAST ── */
+#toast{
+  position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:50%;
+  transform:translateX(-50%) translateY(14px);
+  background:rgba(28,18,18,.92);color:var(--white);
+  padding:10px 20px;border-radius:99px;
+  font-size:13px;font-weight:500;
+  opacity:0;transition:opacity .22s,transform .22s;
+  pointer-events:none;z-index:400;
+  white-space:nowrap;max-width:88vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── LOADER ── */
+#loader{
+  display:none;position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.42);
+  align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;color:var(--white);
+  font-size:15px;font-weight:600;
+}
+#loader.show{display:flex}
+.spin{
+  width:32px;height:32px;
+  border:3px solid rgba(255,255,255,.3);
+  border-top-color:var(--gold);
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── RTL ADJUSTMENTS ── */
+[dir="rtl"] .form-title::before{order:1}
+[dir="rtl"] thead th{text-align:right}
+[dir="rtl"] tbody td{text-align:right}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-logo">&#128218;</div>
+    <div>
+      <div class="hdr-title" id="hdrTitle">Unregistered Books List</div>
+      <div class="hdr-sub" id="hdrSub">Book Fair Inspector Tool</div>
+    </div>
+  </div>
+  <div class="hdr-btns">
+    <button class="lang-btn" id="btnLang">&#127744; العربية</button>
+  </div>
+</header>
+
+
+<!-- MAIN APP -->
+<div id="mainApp">
+
+  <div class="status-bar">
+    <div><span class="s-dot" id="sDot"></span><span id="sMsg">Ready</span></div>
+    <span class="total-badge" id="totalBadge">0 entries</span>
+  </div>
+
+  <!-- ADD ENTRY FORM -->
+  <div class="form-card">
+    <div class="form-title" id="formTitle">Add New Entry</div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label id="lTitle">Title / العنوان</label>
+        <input type="text" id="fTitle" placeholder="Book title" autocomplete="off" autocapitalize="words"/>
+      </div>
+      <div class="form-field">
+        <label id="lAuthor">Author / الكاتب</label>
+        <input type="text" id="fAuthor" placeholder="Author name" autocomplete="off" autocapitalize="words"/>
+      </div>
+      <div class="form-field">
+        <label id="lPublisher">Publisher / دار النشر</label>
+        <input type="text" id="fPublisher" placeholder="Publisher name" autocomplete="off" autocapitalize="words"/>
+      </div>
+      <div class="form-field">
+        <label id="lCountry">Country / البلد</label>
+        <input type="text" id="fCountry" placeholder="Country" autocomplete="off" autocapitalize="words"/>
+      </div>
+      <div class="form-field">
+        <label id="lWing">ISBN</label>
+        <input type="text" id="fWing" placeholder="e.g. 9780747532743" autocomplete="off" autocapitalize="none" inputmode="numeric" pattern="[0-9]*" maxlength="13"/>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="submit-btn" id="btnSubmit">&#10003; Add Entry</button>
+      <button class="clear-btn" id="btnClear">Clear</button>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <div class="table-label" id="tblLabel">Registered Entries</div>
+      <button class="export-btn" id="btnExport">&#128190; Export Excel</button>
+    </div>
+    <div class="tbl-container">
+      <table id="mainTable">
+        <thead>
+          <tr>
+            <th id="thNo">#</th>
+            <th id="thTitle">Title</th>
+            <th id="thAuthor">Author</th>
+            <th id="thPublisher">Publisher</th>
+            <th id="thCountry">Country</th>
+            <th id="thWing">ISBN</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- DUPLICATE MODAL -->
+<div class="dup-modal-bg" id="dupModal">
+  <div class="dup-modal">
+    <span class="dup-x">&#10060;</span>
+    <div class="dup-title" id="dupTitle">Already in the list!</div>
+    <div class="dup-sub" id="dupSub">This ISBN is already registered:</div>
+    <div class="dup-isbn" id="dupIsbn"></div>
+    <button class="dup-close" id="dupClose" onclick="document.getElementById('dupModal').classList.remove('open')">OK</button>
+  </div>
+</div>
+
+<div id="loader"><div class="spin"></div><span id="loaderMsg">Loading&hellip;</span></div>
+<div id="toast"></div>
+
+<script>
+/* =================================================================
+   CONFIG & STORAGE
+   ================================================================= */
+/* Hardcoded config — no setup screen needed */
+var GITHUB_USER  = "qtrgamer85-maker";
+var GITHUB_REPO  = "bookfair-database";
+var GITHUB_TOKEN = "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";
+var DATA_FILE    = "unregistered_books.json";
+var cfg          = { user: GITHUB_USER, repo: GITHUB_REPO, token: GITHUB_TOKEN };
+var entries      = [];
+var currentSha   = null;
+var saveTimer    = null;
+var lang         = "en"; /* "en" or "ar" */
+
+/* =================================================================
+   TRANSLATIONS
+   ================================================================= */
+var T = {
+  en: {
+    hdrTitle:    "Unregistered Books List",
+    hdrSub:      "Book Fair Inspector Tool",
+    formTitle:   "Add New Entry",
+    lTitle:      "Title",
+    lAuthor:     "Author",
+    lPublisher:  "Publisher",
+    lCountry:    "Country",
+    lWing:       "ISBN",
+    pTitle:      "Book title",
+    pAuthor:     "Author name",
+    pPublisher:  "Publisher name",
+    pCountry:    "Country",
+    pWing:       "e.g. 9780747532743",
+    btnSubmit:   "\u2713 Add Entry",
+    btnClear:    "Clear",
+    tblLabel:    "Registered Entries",
+    btnExport:   "\uD83D\uDCBE Export Excel",
+    thNo:        "#",
+    thTitle:     "Title",
+    thAuthor:    "Author",
+    thPublisher: "Publisher",
+    thCountry:   "Country",
+    thWing:      "ISBN",
+    langBtn:     "\uD83C\uDF0D \u0627\u0644\u0639\u0631\u0628\u064A\u0629",
+    emptyMsg:    "No entries yet.\nAdd the first unregistered book above.",
+    entriesLbl:  "entries",
+    errRequired: "Please fill in all fields",
+    saved:       "Entry saved",
+    deleted:     "Entry deleted",
+    exported:    "Excel file exported",
+    synced:      "Synced",
+    saving:      "Saving\u2026",
+    loading:     "Loading\u2026"
+  },
+  ar: {
+    hdrTitle:    "\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0643\u062A\u0628 \u063A\u064A\u0631 \u0627\u0644\u0645\u0633\u062C\u0644\u0629",
+    hdrSub:      "\u0623\u062F\u0627\u0629 \u0645\u0641\u062A\u0634 \u0645\u0639\u0631\u0636 \u0627\u0644\u0643\u062A\u0627\u0628",
+    formTitle:   "\u0625\u0636\u0627\u0641\u0629 \u0625\u062F\u062E\u0627\u0644 \u062C\u062F\u064A\u062F",
+    lTitle:      "\u0627\u0644\u0639\u0646\u0648\u0627\u0646",
+    lAuthor:     "\u0627\u0644\u0643\u0627\u062A\u0628",
+    lPublisher:  "\u062F\u0627\u0631 \u0627\u0644\u0646\u0634\u0631",
+    lCountry:    "\u0627\u0644\u0628\u0644\u062F",
+    lWing:       "ISBN",
+    pTitle:      "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0643\u062A\u0627\u0628",
+    pAuthor:     "\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u062A\u0628",
+    pPublisher:  "\u0627\u0633\u0645 \u062F\u0627\u0631 \u0627\u0644\u0646\u0634\u0631",
+    pCountry:    "\u0627\u0644\u0628\u0644\u062F",
+    pWing:       "\u0645\u062B\u0627\u0644: 9780747532743",
+    btnSubmit:   "\u2713 \u0625\u0636\u0627\u0641\u0629",
+    btnClear:    "\u0645\u0633\u062D",
+    tblLabel:    "\u0627\u0644\u0625\u062F\u062E\u0627\u0644\u0627\u062A \u0627\u0644\u0645\u0633\u062C\u0644\u0629",
+    btnExport:   "\uD83D\uDCBE \u062A\u0635\u062F\u064A\u0631 Excel",
+    thNo:        "\u0631\u0642\u0645",
+    thTitle:     "\u0627\u0644\u0639\u0646\u0648\u0627\u0646",
+    thAuthor:    "\u0627\u0644\u0643\u0627\u062A\u0628",
+    thPublisher: "\u062F\u0627\u0631 \u0627\u0644\u0646\u0634\u0631",
+    thCountry:   "\u0627\u0644\u0628\u0644\u062F",
+    thWing:      "ISBN",
+    langBtn:     "\uD83C\uDF0D English",
+    emptyMsg:    "\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062F\u062E\u0627\u0644\u0627\u062A \u0628\u0639\u062F.\n\u0623\u0636\u0641 \u0623\u0648\u0644 \u0643\u062A\u0627\u0628 \u063A\u064A\u0631 \u0645\u0633\u062C\u0644 \u0623\u0639\u0644\u0627\u0647.",
+    entriesLbl:  "\u0625\u062F\u062E\u0627\u0644",
+    errRequired: "\u064A\u0631\u062C\u0649 \u0645\u0644\u0621 \u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0644",
+    saved:       "\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u062F\u062E\u0627\u0644",
+    deleted:     "\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0625\u062F\u062E\u0627\u0644",
+    exported:    "\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0645\u0644\u0641 Excel",
+    synced:      "\u062A\u0645 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629",
+    saving:      "\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638\u2026",
+    loading:     "\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026"
+  }
+};
+
+function t(key) { return (T[lang] && T[lang][key]) || T.en[key] || key; }
+
+/* =================================================================
+   GITHUB API
+   ================================================================= */
+function apiUrl(path) {
+  return "https://api.github.com/repos/" + cfg.user + "/" + cfg.repo + "/contents/" + path;
+}
+
+function ghGet(path, cb) {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", apiUrl(path) + "?t=" + Date.now(), true);
+  xhr.setRequestHeader("Authorization", "token " + cfg.token);
+  xhr.setRequestHeader("Accept", "application/vnd.github.v3+json");
+  xhr.timeout = 15000;
+  xhr.onload = function() {
+    if (xhr.status === 200) { try { cb(null, JSON.parse(xhr.responseText)); } catch(e) { cb("Parse error"); } }
+    else if (xhr.status === 404) { cb(null, null); }
+    else { cb("GitHub error " + xhr.status); }
+  };
+  xhr.onerror = function() { cb("Network error"); };
+  xhr.ontimeout = function() { cb("Timeout"); };
+  xhr.send();
+}
+
+function ghPut(path, content, sha, cb) {
+  var body = JSON.stringify({
+    message: "Update " + path,
+    content: btoa(unescape(encodeURIComponent(content))),
+    sha: sha || undefined
+  });
+  var xhr = new XMLHttpRequest();
+  xhr.open("PUT", apiUrl(path), true);
+  xhr.setRequestHeader("Authorization", "token " + cfg.token);
+  xhr.setRequestHeader("Accept", "application/vnd.github.v3+json");
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.timeout = 20000;
+  xhr.onload = function() {
+    if (xhr.status === 200 || xhr.status === 201) { try { cb(null, JSON.parse(xhr.responseText)); } catch(e) { cb("Parse error"); } }
+    else { cb("GitHub error " + xhr.status); }
+  };
+  xhr.onerror = function() { cb("Network error"); };
+  xhr.ontimeout = function() { cb("Timeout"); };
+  xhr.send(body);
+}
+
+/* =================================================================
+   LOAD & SAVE
+   ================================================================= */
+function loadEntries(cb) {
+  setStatus("saving", t("loading"));
+  ghGet(DATA_FILE, function(err, res) {
+    if (err) { setStatus("error", "Load failed: " + err); if (cb) cb(err); return; }
+    if (!res) {
+      entries = []; currentSha = null;
+      setStatus("", t("synced"));
+    } else {
+      currentSha = res.sha;
+      try {
+        var json = decodeURIComponent(escape(atob(res.content.replace(/\n/g,""))));
+        entries = JSON.parse(json);
+        if (!Array.isArray(entries)) entries = [];
+        setStatus("", t("synced") + " \u2014 " + entries.length + " " + t("entriesLbl"));
+      } catch(e) {
+        entries = [];
+        setStatus("error", "Parse error");
+      }
+    }
+    renderTable();
+    if (cb) cb(null);
+  });
+}
+
+function scheduleSave() {
+  setStatus("saving", t("saving"));
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushEntries, 1500);
+}
+
+function pushEntries(cb) {
+  setStatus("saving", t("saving"));
+  var content = JSON.stringify(entries, null, 2);
+  ghPut(DATA_FILE, content, currentSha, function(err, res) {
+    if (err) { setStatus("error", "Save failed: " + err); showToast("Save failed: " + err); if (cb) cb(err); return; }
+    currentSha = res.content.sha;
+    setStatus("", t("synced") + " \u2014 " + entries.length + " " + t("entriesLbl"));
+    if (cb) cb(null);
+  });
+}
+
+/* =================================================================
+   UI HELPERS
+   ================================================================= */
+var toastTimer;
+function showToast(msg) {
+  var el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove("show"); }, 2600);
+}
+function setStatus(state, msg) {
+  document.getElementById("sDot").className = "s-dot" + (state ? " " + state : "");
+  document.getElementById("sMsg").textContent = msg;
+}
+function showLoader(msg) {
+  document.getElementById("loaderMsg").textContent = msg || t("loading");
+  document.getElementById("loader").classList.add("show");
+}
+function hideLoader() { document.getElementById("loader").classList.remove("show"); }
+
+/* =================================================================
+   RENDER TABLE
+   ================================================================= */
+function renderTable() {
+  var tbody = document.getElementById("tableBody");
+  document.getElementById("totalBadge").textContent = entries.length + " " + t("entriesLbl");
+  tbody.innerHTML = "";
+
+  if (!entries.length) {
+    var tr = document.createElement("tr");
+    var td = document.createElement("td");
+    td.colSpan = 7;
+    td.innerHTML = '<div class="empty-table"><div class="ei">&#128218;</div><p>' + t("emptyMsg").replace("\n","<br>") + '</p></div>';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  for (var i = 0; i < entries.length; i++) {
+    (function(entry, idx) {
+      var tr = document.createElement("tr");
+      var cells = [
+        String(idx + 1),
+        entry.title || "",
+        entry.author || "",
+        entry.publisher || "",
+        entry.country || "",
+        entry.isbn || ""
+      ];
+      for (var j = 0; j < cells.length; j++) {
+        var td = document.createElement("td");
+        td.textContent = cells[j];
+        tr.appendChild(td);
+      }
+      var tdDel = document.createElement("td");
+      var delBtn = document.createElement("button");
+      delBtn.className = "del-row";
+      delBtn.textContent = "\u2715";
+      delBtn.addEventListener("click", function() {
+        if (window.confirm(lang === "ar" ? "\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0625\u062F\u062E\u0627\u0644\u061F" : "Delete this entry?")) {
+          entries.splice(idx, 1);
+          renderTable();
+          scheduleSave();
+          showToast(t("deleted"));
+        }
+      });
+      tdDel.appendChild(delBtn);
+      tr.appendChild(tdDel);
+      tbody.appendChild(tr);
+    })(entries[i], i);
+  }
+}
+
+
+/* =================================================================
+   DUPLICATE CHECK & NUMBERS-ONLY ISBN
+   ================================================================= */
+function showDuplicate(isbn) {
+  var isAr = lang === "ar";
+  document.getElementById("dupTitle").textContent  = isAr
+    ? "\u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644 \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629!"
+    : "Already in the list!";
+  document.getElementById("dupSub").textContent    = isAr
+    ? "\u0647\u0630\u0627 \u0627\u0644ـ ISBN \u0645\u0633\u062C\u0651\u0644 \u0645\u0633\u0628\u0642\u0627\u064B:"
+    : "This ISBN is already registered:";
+  document.getElementById("dupClose").textContent  = isAr ? "\u062D\u0633\u0646\u0627\u064B" : "OK";
+  document.getElementById("dupIsbn").textContent   = isbn;
+  document.getElementById("dupModal").classList.add("open");
+}
+
+function isbnExists(isbn) {
+  for (var i = 0; i < entries.length; i++) {
+    if (entries[i].isbn === isbn) return true;
+  }
+  return false;
+}
+
+/* =================================================================
+   ADD ENTRY
+   ================================================================= */
+function addEntry() {
+  var fields = ["fTitle","fAuthor","fPublisher","fCountry","fWing"];
+  var vals   = {};
+  var valid  = true;
+
+  fields.forEach(function(id) {
+    var el = document.getElementById(id);
+    el.classList.remove("err");
+    var v = el.value.trim();
+    if (!v) { el.classList.add("err"); valid = false; }
+    vals[id] = v;
+  });
+
+  if (!valid) { showToast(t("errRequired")); return; }
+
+  /* Check duplicate ISBN */
+  if (vals.fWing && isbnExists(vals.fWing)) {
+    showDuplicate(vals.fWing);
+    return;
+  }
+
+  var entry = {
+    id:        "e" + Date.now() + Math.floor(Math.random() * 9999),
+    title:     vals.fTitle,
+    author:    vals.fAuthor,
+    publisher: vals.fPublisher,
+    country:   vals.fCountry,
+    isbn:      vals.fWing,
+    timestamp: new Date().toISOString()
+  };
+
+  entries.push(entry);
+  renderTable();
+  scheduleSave();
+  showToast(t("saved"));
+
+  /* Clear form */
+  fields.forEach(function(id) { document.getElementById(id).value = ""; });
+  document.getElementById("fTitle").focus();
+}
+
+function clearForm() {
+  ["fTitle","fAuthor","fPublisher","fCountry","fWing"].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.value = ""; el.classList.remove("err");
+  });
+}
+
+/* =================================================================
+   EXPORT TO EXCEL
+   ================================================================= */
+function exportExcel() {
+  if (!entries.length) { showToast(lang === "ar" ? "\u0644\u0627 \u064A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A" : "No data to export"); return; }
+
+  var wsData = [
+    /* Bilingual headers */
+    ["#", "Title / \u0627\u0644\u0639\u0646\u0648\u0627\u0646", "Author / \u0627\u0644\u0643\u0627\u062A\u0628", "Publisher / \u062F\u0627\u0631 \u0627\u0644\u0646\u0634\u0631", "Country / \u0627\u0644\u0628\u0644\u062F", "ISBN", "Date Added"]
+  ];
+
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i];
+    var dateStr = e.timestamp ? new Date(e.timestamp).toLocaleDateString() : "";
+    wsData.push([i + 1, e.title, e.author, e.publisher, e.country, e.isbn, dateStr]);
+  }
+
+  var wb  = XLSX.utils.book_new();
+  var ws  = XLSX.utils.aoa_to_sheet(wsData);
+
+  /* Column widths */
+  ws["!cols"] = [
+    {wch:5},{wch:30},{wch:22},{wch:22},{wch:16},{wch:14},{wch:14}
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, "Unregistered Books");
+
+  var date = new Date();
+  var fname = "unregistered_books_"
+    + date.getFullYear()
+    + String(date.getMonth()+1).padStart(2,"0")
+    + String(date.getDate()).padStart(2,"0")
+    + ".xlsx";
+
+  XLSX.writeFile(wb, fname);
+  showToast(t("exported"));
+}
+
+/* =================================================================
+   LANGUAGE SWITCH
+   ================================================================= */
+function applyLang() {
+  var isAr = lang === "ar";
+  document.documentElement.lang = lang;
+  document.documentElement.dir  = isAr ? "rtl" : "ltr";
+
+  var ids = [
+    "hdrTitle","hdrSub","formTitle",
+    "lTitle","lAuthor","lPublisher","lCountry","lWing",
+    "btnSubmit","btnClear","tblLabel","btnExport",
+    "thNo","thTitle","thAuthor","thPublisher","thCountry","thWing"
+  ];
+  ids.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = t(id.replace("btn","btn").replace("th","th").replace("l","l"));
+  });
+
+  /* Placeholders */
+  var pMap = {fTitle:"pTitle",fAuthor:"pAuthor",fPublisher:"pPublisher",fCountry:"pCountry",fWing:"pWing"};
+  for (var k in pMap) {
+    var el = document.getElementById(k);
+    if (el) el.placeholder = t(pMap[k]);
+  }
+
+  document.getElementById("btnLang").textContent = t("langBtn");
+  document.getElementById("btnSubmit").textContent = t("btnSubmit");
+  document.getElementById("btnClear").textContent  = t("btnClear");
+  document.getElementById("btnExport").textContent = t("btnExport");
+  document.getElementById("formTitle").textContent = t("formTitle");
+  document.getElementById("tblLabel").textContent  = t("tblLabel");
+  document.getElementById("hdrTitle").textContent  = t("hdrTitle");
+  document.getElementById("hdrSub").textContent    = t("hdrSub");
+
+  var thIds = ["thNo","thTitle","thAuthor","thPublisher","thCountry","thWing"];
+  thIds.forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=t(id); });
+
+  renderTable();
+}
+
+
+
+/* =================================================================
+   INIT
+   ================================================================= */
+document.addEventListener("DOMContentLoaded", function() {
+
+  /* Numbers-only enforcement for ISBN field */
+  document.getElementById("fWing").addEventListener("input", function() {
+    var pos = this.selectionStart;
+    var cleaned = this.value.replace(/[^0-9]/g, "");
+    if (cleaned !== this.value) {
+      this.value = cleaned;
+      this.setSelectionRange(pos - 1, pos - 1);
+    }
+  });
+  document.getElementById("fWing").addEventListener("keydown", function(e) {
+    /* Allow: backspace, delete, tab, escape, enter, arrows, home, end */
+    var allowed = [8,9,13,27,46,37,38,39,40,35,36];
+    if (allowed.indexOf(e.keyCode) !== -1) return;
+    /* Allow Ctrl/Cmd+A, C, V, X */
+    if ((e.ctrlKey || e.metaKey) && [65,67,86,88].indexOf(e.keyCode) !== -1) return;
+    /* Block anything that isn't a number */
+    if (e.key && e.key.length === 1 && !/[0-9]/.test(e.key)) {
+      e.preventDefault();
+    }
+  });
+
+
+  document.getElementById("dupModal").addEventListener("click", function(e) {
+    if (e.target === this) this.classList.remove("open");
+  });
+
+
+
+  document.getElementById("btnLang").addEventListener("click", function() {
+    lang = lang === "en" ? "ar" : "en";
+    applyLang();
+  });
+
+  document.getElementById("btnSubmit").addEventListener("click", addEntry);
+  document.getElementById("btnClear").addEventListener("click", clearForm);
+  document.getElementById("btnExport").addEventListener("click", exportExcel);
+
+  /* Submit on Enter in last field */
+  document.getElementById("fWing").addEventListener("keydown", function(e) {
+    if (e.keyCode === 13) addEntry();
+  });
+
+  /* Settings button */
+
+  showLoader();
+  loadEntries(function(err) {
+    hideLoader();
+    if (err) { showToast("Load failed — check connection"); }
+  });
+});
+</script>
+</body>
+</html>
