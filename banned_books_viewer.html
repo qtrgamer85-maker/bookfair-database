@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Banned Books Reference</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;background:#f2f2f7;color:#1c1c1e;min-height:100vh;padding-bottom:env(safe-area-inset-bottom,20px)}
+
+.hdr{background:#c0392b;color:#fff;padding:16px 16px 14px;padding-top:calc(16px + env(safe-area-inset-top,0px));display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.hdr-icon{font-size:24px;line-height:1}
+.hdr h1{font-size:16px;font-weight:700}
+.hdr-sub{font-size:11px;opacity:.82;margin-top:2px}
+.refresh-btn{background:rgba(255,255,255,.95);color:#c0392b;border:none;border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+
+.tabs-scroll{background:#fff;border-top:1px solid #e0e0e5;border-bottom:1px solid #e0e0e5;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap}
+.tabs-scroll::-webkit-scrollbar{display:none}
+.tab-inner{display:inline-flex}
+.tab-btn{display:inline-flex;align-items:center;gap:5px;padding:12px 16px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:14px;font-weight:600;color:#8e8e93;white-space:nowrap;cursor:pointer}
+.tab-btn.active{color:#c0392b;border-bottom-color:#c0392b}
+.tab-pill{background:#f2f2f7;color:#8e8e93;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;min-width:22px;text-align:center}
+.tab-btn.active .tab-pill{background:#fdf0ef;color:#c0392b}
+
+.section{display:none}.section.active{display:block}
+.grid-pad{padding:12px}
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+
+.book-card{background:#fff;border:1px solid #e0e0e5;border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .12s}
+.book-card:active{transform:scale(0.97)}
+.book-img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:#f2f2f7}
+.book-name{padding:7px 9px;font-size:11px;font-weight:600;color:#1c1c1e;border-top:1px solid #f0f0f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.empty-state{grid-column:1/-1;text-align:center;padding:40px 16px;color:#aeaeb2}
+.empty-icon{font-size:42px;margin-bottom:10px}
+.empty-msg{font-size:14px;line-height:1.7}
+
+/* Full screen image viewer */
+.lightbox{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.92);align-items:center;justify-content:center;flex-direction:column;padding:20px}
+.lightbox.open{display:flex}
+.lightbox-img{max-width:100%;max-height:80vh;object-fit:contain;border-radius:8px}
+.lightbox-title{color:#fff;font-size:14px;font-weight:600;margin-top:14px;text-align:center;max-width:90vw}
+.lightbox-close{position:absolute;top:calc(16px + env(safe-area-inset-top,0px));right:16px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* Status bar */
+.status-bar{background:#fff;border-bottom:1px solid #e0e0e5;padding:8px 14px;font-size:12px;color:#8e8e93;display:flex;align-items:center;justify-content:space-between}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#34c759;display:inline-block;margin-right:5px;flex-shrink:0}
+.status-dot.loading{background:#ff9500}
+.status-dot.error{background:#ff3b30}
+
+/* Loading overlay */
+#loader{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;font-size:15px;font-weight:600}
+#loader.show{display:flex}
+.spin{width:32px;height:32px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#toast{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(12px);background:rgba(28,28,30,.92);color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;font-weight:500;opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;z-index:400;white-space:nowrap;max-width:86vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* Error screen */
+#errorScreen{display:none;padding:32px 20px;text-align:center}
+#errorScreen .err-icon{font-size:48px;margin-bottom:12px}
+#errorScreen h2{font-size:18px;font-weight:700;margin-bottom:8px;color:#c0392b}
+#errorScreen p{font-size:14px;color:#636366;line-height:1.6;margin-bottom:20px}
+#errorScreen button{background:#c0392b;color:#fff;border:none;border-radius:12px;padding:13px 28px;font-size:15px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-icon">&#128683;</div>
+    <div>
+      <h1>Banned Books Reference</h1>
+      <div class="hdr-sub" id="hdrSub">Field Inspector</div>
+    </div>
+  </div>
+  <button class="refresh-btn" id="btnRefresh">&#8635; Refresh</button>
+</header>
+
+<div class="status-bar">
+  <div style="display:flex;align-items:center">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusMsg">Loading&hellip;</span>
+  </div>
+  <span id="totalCount"></span>
+</div>
+
+<div class="tabs-scroll" id="tabsWrap" style="display:none">
+  <div class="tab-inner" id="tabRow"></div>
+</div>
+
+<div id="sectionsWrap"></div>
+
+<div id="errorScreen">
+  <div class="err-icon">&#128683;</div>
+  <h2>Could not load books</h2>
+  <p id="errorMsg">Check your internet connection and try again.</p>
+  <button id="btnRetry">Try Again</button>
+</div>
+
+<!-- Lightbox for full-screen image -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lbClose">&#10005;</button>
+  <img class="lightbox-img" id="lbImg" src="" alt=""/>
+  <div class="lightbox-title" id="lbTitle"></div>
+</div>
+
+<div id="loader"><div class="spin"></div><span>Loading books&hellip;</span></div>
+<div id="toast"></div>
+
+<script>
+/* =================================================================
+   CONFIGURATION
+   Change GITHUB_USER and GITHUB_REPO to match your repository.
+   DATA_FILE must match what the admin app writes.
+   ================================================================= */
+var GITHUB_USER = "qtrgamer85-maker";
+var GITHUB_REPO = "bookfair-database";
+var DATA_FILE   = "books_data.json";
+
+/* Raw GitHub URL — no auth needed for public repos */
+var DATA_URL = "https://raw.githubusercontent.com/"
+  + GITHUB_USER + "/" + GITHUB_REPO + "/main/" + DATA_FILE;
+
+/* =================================================================
+   STATE
+   ================================================================= */
+var appData  = { cats: [], books: {} };
+var cats     = [];
+var activeTab = "";
+
+/* =================================================================
+   UTILITIES
+   ================================================================= */
+var toastTimer;
+function showToast(msg) {
+  var el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove("show"); }, 2600);
+}
+
+function setStatus(state, msg) {
+  var dot = document.getElementById("statusDot");
+  var txt = document.getElementById("statusMsg");
+  dot.className = "status-dot" + (state ? " " + state : "");
+  txt.textContent = msg;
+}
+
+function showLoader() { document.getElementById("loader").classList.add("show"); }
+function hideLoader() { document.getElementById("loader").classList.remove("show"); }
+
+/* =================================================================
+   FETCH DATA
+   ================================================================= */
+function fetchData(cb) {
+  setStatus("loading", "Loading\u2026");
+  /* Cache-bust so iOS doesn't serve stale data */
+  var url = DATA_URL + "?t=" + Date.now();
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", url, true);
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      try {
+        var data = JSON.parse(xhr.responseText);
+        cb(null, data);
+      } catch(e) {
+        cb("Could not parse data file");
+      }
+    } else if (xhr.status === 404) {
+      cb("No books have been added yet. Ask your admin to add books and sync.");
+    } else {
+      cb("Server error " + xhr.status);
+    }
+  };
+  xhr.onerror = function() {
+    cb("Network error \u2014 check your internet connection");
+  };
+  xhr.send();
+}
+
+/* =================================================================
+   BUILD UI
+   ================================================================= */
+function buildTabs() {
+  var tabRow = document.getElementById("tabRow");
+  var wrap   = document.getElementById("sectionsWrap");
+
+  /* Clear old content */
+  tabRow.innerHTML = "";
+  wrap.innerHTML   = "";
+
+  for (var i = 0; i < cats.length; i++) {
+    var c = cats[i];
+
+    /* Section */
+    var secDiv  = document.createElement("div");
+    secDiv.className = "section"; secDiv.id = "sec-" + c.name;
+    var padDiv  = document.createElement("div"); padDiv.className = "grid-pad";
+    var gridDiv = document.createElement("div"); gridDiv.className = "book-grid"; gridDiv.id = "grid-" + c.name;
+    padDiv.appendChild(gridDiv); secDiv.appendChild(padDiv); wrap.appendChild(secDiv);
+
+    /* Tab button */
+    (function(cat) {
+      var btn  = document.createElement("button");
+      btn.className = "tab-btn"; btn.id = "tab-" + cat.name;
+      var lbl  = document.createElement("span"); lbl.textContent = cat.label;
+      var pill = document.createElement("span"); pill.className = "tab-pill"; pill.id = "pill-" + cat.name; pill.textContent = "0";
+      btn.appendChild(lbl); btn.appendChild(pill);
+      btn.addEventListener("click", function() { switchTab(cat.name); });
+      tabRow.appendChild(btn);
+    })(c);
+  }
+}
+
+function switchTab(name) {
+  activeTab = name;
+  for (var i = 0; i < cats.length; i++) {
+    var tab = document.getElementById("tab-" + cats[i].name);
+    var sec = document.getElementById("sec-" + cats[i].name);
+    if (tab) { if (cats[i].name === name) tab.classList.add("active"); else tab.classList.remove("active"); }
+    if (sec) { if (cats[i].name === name) sec.classList.add("active"); else sec.classList.remove("active"); }
+  }
+}
+
+function renderGrid(catName) {
+  var items = appData.books[catName] || [];
+  var pill  = document.getElementById("pill-" + catName);
+  if (pill) pill.textContent = String(items.length);
+  var grid = document.getElementById("grid-" + catName);
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  if (!items.length) {
+    var empty = document.createElement("div"); empty.className = "empty-state";
+    empty.innerHTML = '<div class="empty-icon">&#128218;</div><div class="empty-msg">No books in this category yet.</div>';
+    grid.appendChild(empty);
+    return;
+  }
+
+  for (var j = 0; j < items.length; j++) {
+    (function(item) {
+      var card = document.createElement("div"); card.className = "book-card";
+      var img  = document.createElement("img");  img.className = "book-img";
+      img.src = item.src; img.alt = item.title || "Cover";
+      img.setAttribute("loading", "lazy");
+      var nm   = document.createElement("div");  nm.className = "book-name";
+      nm.title = item.title || ""; nm.textContent = item.title || "Untitled";
+      card.appendChild(img); card.appendChild(nm);
+      /* Tap to view full screen */
+      card.addEventListener("click", function() { openLightbox(item.src, item.title || "Untitled"); });
+      grid.appendChild(card);
+    })(items[j]);
+  }
+}
+
+function renderAll() {
+  var total = 0;
+  for (var i = 0; i < cats.length; i++) {
+    renderGrid(cats[i].name);
+    total += (appData.books[cats[i].name] || []).length;
+  }
+  document.getElementById("totalCount").textContent = total + " books";
+}
+
+/* =================================================================
+   LIGHTBOX
+   ================================================================= */
+function openLightbox(src, title) {
+  document.getElementById("lbImg").src    = src;
+  document.getElementById("lbTitle").textContent = title;
+  document.getElementById("lightbox").classList.add("open");
+}
+function closeLightbox() {
+  document.getElementById("lightbox").classList.remove("open");
+  document.getElementById("lbImg").src = "";
+}
+
+/* =================================================================
+   LOAD & RENDER
+   ================================================================= */
+function loadAndRender() {
+  showLoader();
+  document.getElementById("errorScreen").style.display  = "none";
+  document.getElementById("tabsWrap").style.display     = "none";
+  document.getElementById("sectionsWrap").innerHTML     = "";
+
+  fetchData(function(err, data) {
+    hideLoader();
+    if (err) {
+      setStatus("error", "Failed to load");
+      document.getElementById("errorMsg").textContent  = err;
+      document.getElementById("errorScreen").style.display = "block";
+      return;
+    }
+
+    appData = data;
+    cats = (data.cats || []).slice().sort(function(a,b){ return (a.order||0)-(b.order||0); });
+
+    if (!cats.length) {
+      setStatus("error", "No categories found");
+      document.getElementById("errorMsg").textContent  = "The admin hasn't added any books yet.";
+      document.getElementById("errorScreen").style.display = "block";
+      return;
+    }
+
+    document.getElementById("tabsWrap").style.display = "block";
+    buildTabs();
+    renderAll();
+    switchTab(cats[0].name);
+
+    var now = new Date();
+    setStatus("", "Updated " + now.getHours() + ":" + (now.getMinutes()<10?"0":"") + now.getMinutes());
+    document.getElementById("hdrSub").textContent = "Field Inspector \u2014 read only";
+  });
+}
+
+/* =================================================================
+   INIT
+   ================================================================= */
+document.addEventListener("DOMContentLoaded", function() {
+
+  document.getElementById("btnRefresh").addEventListener("click", function() {
+    showToast("Refreshing\u2026");
+    loadAndRender();
+  });
+
+  document.getElementById("btnRetry").addEventListener("click", loadAndRender);
+
+  document.getElementById("lbClose").addEventListener("click", closeLightbox);
+  document.getElementById("lightbox").addEventListener("click", function(e) {
+    if (e.target === this) closeLightbox();
+  });
+
+  loadAndRender();
+});
+</script>
+</body>
+</html>
