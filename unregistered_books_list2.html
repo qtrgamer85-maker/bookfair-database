@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Unregistered Books List</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+:root{
+  --maroon:#6d1a2a;
+  --maroon-dark:#4e1220;
+  --gold:#c9a84c;
+  --gold-light:#e2c97e;
+  --gold-pale:#fdf6e3;
+  --white:#ffffff;
+  --bg:#f8f5f0;
+  --border:#e0d5c5;
+  --text:#1c1212;
+  --muted:#7a6a5a;
+  --faint:#b0a090;
+}
+
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Segoe UI",sans-serif;
+  background:var(--bg);color:var(--text);
+  min-height:100vh;
+  padding-bottom:env(safe-area-inset-bottom,20px);
+}
+body[dir="rtl"]{font-family:"Helvetica Neue","Segoe UI",Arial,sans-serif}
+
+/* HEADER */
+.hdr{
+  background:var(--maroon);color:var(--white);
+  padding:14px 16px;
+  padding-top:calc(14px + env(safe-area-inset-top,0px));
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 12px rgba(0,0,0,.3);
+  border-bottom:3px solid var(--gold);
+}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.hdr-logo{
+  width:40px;height:40px;background:var(--gold);
+  border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:20px;flex-shrink:0;
+}
+.hdr-title{font-size:15px;font-weight:700;line-height:1.3}
+.hdr-sub{font-size:11px;opacity:.8;margin-top:2px}
+.hdr-btns{display:flex;gap:7px;flex-shrink:0}
+.lang-btn{
+  background:rgba(255,255,255,.15);color:var(--white);
+  border:1.5px solid rgba(255,255,255,.35);border-radius:8px;
+  padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;
+}
+
+/* STATUS BAR */
+.status-bar{
+  background:var(--white);border-bottom:1px solid var(--border);
+  padding:7px 14px;display:flex;align-items:center;
+  justify-content:space-between;font-size:12px;color:var(--muted);
+}
+.s-dot{width:7px;height:7px;border-radius:50%;background:#34c759;
+  display:inline-block;margin-inline-end:6px;vertical-align:middle}
+.s-dot.loading{background:var(--gold)}
+.s-dot.error{background:#ff3b30}
+.total-badge{
+  background:var(--gold-pale);color:var(--maroon);
+  border:1px solid var(--gold-light);border-radius:99px;
+  padding:2px 10px;font-size:11px;font-weight:700;
+}
+
+/* FORM */
+.form-card{
+  background:var(--white);border-bottom:1px solid var(--border);padding:14px;
+}
+.form-title{
+  font-size:13px;font-weight:700;color:var(--maroon);
+  margin-bottom:10px;display:flex;align-items:center;gap:6px;
+}
+.form-title::before{
+  content:"";display:inline-block;width:3px;height:16px;
+  background:var(--gold);border-radius:2px;flex-shrink:0;
+}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+@media(max-width:480px){.form-grid{grid-template-columns:1fr}}
+.form-field label{
+  display:block;font-size:11px;font-weight:600;
+  color:var(--muted);margin-bottom:4px;
+}
+.form-field input{
+  width:100%;border:1.5px solid var(--border);
+  background:var(--bg);color:var(--text);
+  border-radius:8px;padding:10px 11px;
+  font-size:15px;outline:none;
+}
+.form-field input:focus{border-color:var(--maroon)}
+.form-field input.err{border-color:#ff3b30;background:#fff5f5}
+.form-field input::placeholder{color:var(--faint)}
+.form-actions{display:flex;gap:8px;margin-top:11px}
+.submit-btn{
+  flex:1;background:var(--maroon);color:var(--white);
+  border:none;border-radius:10px;padding:12px;
+  font-size:14px;font-weight:700;cursor:pointer;
+}
+.submit-btn:active{background:var(--maroon-dark)}
+.clear-btn{
+  background:var(--bg);color:var(--muted);
+  border:1.5px solid var(--border);border-radius:10px;
+  padding:12px 14px;font-size:14px;font-weight:600;cursor:pointer;
+}
+
+/* TABLE */
+.table-wrap{padding:14px}
+.table-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;flex-wrap:wrap;gap:8px;
+}
+.table-label{font-size:13px;font-weight:700;color:var(--maroon)}
+.export-btn{
+  background:var(--gold);color:var(--maroon-dark);
+  border:none;border-radius:8px;padding:8px 13px;
+  font-size:12px;font-weight:700;cursor:pointer;
+}
+.export-btn:active{opacity:.8}
+.tbl-container{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+thead tr{background:var(--maroon)}
+thead th{
+  color:var(--white);padding:10px 11px;
+  text-align:start;font-weight:600;font-size:12px;white-space:nowrap;
+}
+thead th:last-child{width:44px;text-align:center}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:nth-child(even){background:var(--gold-pale)}
+tbody tr:hover{background:#f0e8d8}
+tbody td{padding:9px 11px;color:var(--text);vertical-align:middle}
+tbody td:last-child{text-align:center}
+.del-row{
+  background:none;border:none;color:#cc3333;
+  font-size:15px;cursor:pointer;padding:3px 7px;border-radius:6px;
+}
+.del-row:active{background:#fff0f0}
+
+.empty-table{grid-column:1/-1;text-align:center;padding:40px 16px;color:var(--faint)}
+.empty-icon{font-size:38px;margin-bottom:10px}
+.empty-msg{font-size:14px;line-height:1.7}
+
+/* DUPLICATE MODAL */
+.dup-bg{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;padding:20px;
+}
+.dup-bg.open{display:flex}
+.dup-box{
+  background:var(--white);border-radius:20px;
+  padding:30px 22px;max-width:320px;width:100%;
+  text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3);
+  border-top:6px solid #cc2222;
+}
+.dup-x{font-size:68px;line-height:1;color:#cc2222;margin-bottom:6px;display:block}
+.dup-title{font-size:19px;font-weight:800;color:#cc2222;margin-bottom:6px}
+.dup-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:4px}
+.dup-isbn{font-size:15px;font-weight:700;color:var(--maroon);margin-bottom:18px;font-family:monospace}
+.dup-close{
+  background:var(--maroon);color:var(--white);border:none;
+  border-radius:12px;padding:13px 32px;font-size:15px;
+  font-weight:700;cursor:pointer;width:100%;
+}
+
+/* LOADING OVERLAY */
+#loader{
+  display:none;position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.42);
+  align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;color:var(--white);
+  font-size:15px;font-weight:600;
+}
+#loader.show{display:flex}
+.spin{
+  width:32px;height:32px;
+  border:3px solid rgba(255,255,255,.3);
+  border-top-color:var(--gold);
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TOAST */
+#toast{
+  position:fixed;
+  bottom:calc(24px + env(safe-area-inset-bottom,0px));
+  left:50%;transform:translateX(-50%) translateY(14px);
+  background:rgba(28,18,18,.92);color:var(--white);
+  padding:10px 20px;border-radius:99px;font-size:13px;font-weight:500;
+  opacity:0;transition:opacity .22s,transform .22s;
+  pointer-events:none;z-index:400;
+  white-space:nowrap;max-width:88vw;text-align:center;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* RTL */
+[dir="rtl"] .form-title::before{order:1}
+[dir="rtl"] thead th{text-align:right}
+[dir="rtl"] tbody td{text-align:right}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-logo">&#128218;</div>
+    <div>
+      <div class="hdr-title" id="hdrTitle">Unregistered Books List</div>
+      <div class="hdr-sub" id="hdrSub">Book Fair Inspector Tool</div>
+    </div>
+  </div>
+  <div class="hdr-btns">
+    <button class="lang-btn" id="btnLang">&#127744; العربية</button>
+  </div>
+</header>
+
+<div class="status-bar">
+  <div><span class="s-dot" id="sDot"></span><span id="sMsg">Loading&hellip;</span></div>
+  <span class="total-badge" id="totalBadge">0</span>
+</div>
+
+<!-- FORM -->
+<div class="form-card">
+  <div class="form-title" id="formTitle">Add New Entry</div>
+  <div class="form-grid">
+    <div class="form-field">
+      <label id="lTitle">Title</label>
+      <input type="text" id="fTitle" autocomplete="off" autocapitalize="words"/>
+    </div>
+    <div class="form-field">
+      <label id="lAuthor">Author</label>
+      <input type="text" id="fAuthor" autocomplete="off" autocapitalize="words"/>
+    </div>
+    <div class="form-field">
+      <label id="lPublisher">Publisher</label>
+      <input type="text" id="fPublisher" autocomplete="off" autocapitalize="words"/>
+    </div>
+    <div class="form-field">
+      <label id="lCountry">Country</label>
+      <input type="text" id="fCountry" autocomplete="off" autocapitalize="words"/>
+    </div>
+    <div class="form-field">
+      <label id="lIsbn">ISBN</label>
+      <input type="text" id="fIsbn" autocomplete="off"
+             inputmode="numeric" pattern="[0-9]*" maxlength="13"/>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button class="submit-btn" id="btnSubmit">&#10003; Add Entry</button>
+    <button class="clear-btn" id="btnClear">Clear</button>
+  </div>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <div class="table-header">
+    <div class="table-label" id="tblLabel">Registered Entries</div>
+    <button class="export-btn" id="btnExportEn">&#128190; Export EN</button>
+    <button class="export-btn" id="btnExportAr" style="background:#6d1a2a;color:#fff;">&#128190; تصدير AR</button>
+  </div>
+  <div class="tbl-container">
+    <table>
+      <thead>
+        <tr>
+          <th id="thNo">#</th>
+          <th id="thTitle">Title</th>
+          <th id="thAuthor">Author</th>
+          <th id="thPublisher">Publisher</th>
+          <th id="thCountry">Country</th>
+          <th id="thIsbn">ISBN</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DUPLICATE MODAL -->
+<div class="dup-bg" id="dupModal">
+  <div class="dup-box">
+    <span class="dup-x">&#10060;</span>
+    <div class="dup-title" id="dupTitle">Already in the list!</div>
+    <div class="dup-sub" id="dupSub">This ISBN is already registered:</div>
+    <div class="dup-isbn" id="dupIsbn"></div>
+    <button class="dup-close" id="dupClose">OK</button>
+  </div>
+</div>
+
+<div id="loader"><div class="spin"></div><span id="loaderMsg">Loading&hellip;</span></div>
+<div id="toast"></div>
+
+<script>
+/* =================================================================
+   CONFIG — Google Apps Script URL
+   ================================================================= */
+var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxVcV62ZL6HYGc0cNUDnjGOgjdSlL--ZnZsMFOHYPL7iHk6sujcKVgDOVSmudsKn6mY/exec";
+
+/* =================================================================
+   STATE
+   ================================================================= */
+var entries   = [];
+var lang      = "en";
+
+/* =================================================================
+   TRANSLATIONS
+   ================================================================= */
+var T = {
+  en:{
+    hdrTitle:"Unregistered Books List",
+    hdrSub:"Book Fair Inspector Tool",
+    formTitle:"Add New Entry",
+    lTitle:"Title",lAuthor:"Author",lPublisher:"Publisher",
+    lCountry:"Country",lIsbn:"ISBN",
+    pTitle:"Book title",pAuthor:"Author name",
+    pPublisher:"Publisher name",pCountry:"Country",pIsbn:"e.g. 9780747532743",
+    btnSubmit:"\u2713 Add Entry",btnClear:"Clear",
+    tblLabel:"Registered Entries",btnExport:"\uD83D\uDCBE Export Excel",
+    thNo:"#",thTitle:"Title",thAuthor:"Author",
+    thPublisher:"Publisher",thCountry:"Country",thIsbn:"ISBN",
+    langBtn:"\uD83C\uDF0D \u0627\u0644\u0639\u0631\u0628\u064A\u0629",
+    emptyMsg:"No entries yet.\nAdd the first unregistered book above.",
+    entriesLbl:"entries",
+    errRequired:"Please fill in all fields",
+    dupTitle:"Already in the list!",
+    dupSub:"This ISBN is already registered:",
+    dupClose:"OK",
+    saved:"Entry saved",deleted:"Entry deleted",
+    exported:"Excel file exported",
+    loading:"Loading\u2026",saving:"Saving\u2026",
+    synced:"Synced",loadErr:"Could not load \u2014 check connection",
+    saveErr:"Could not save \u2014 try again",delErr:"Could not delete \u2014 try again"
+  },
+  ar:{
+    hdrTitle:"\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0643\u062a\u0628 \u063a\u064a\u0631 \u0627\u0644\u0645\u0633\u062c\u0644\u0629",
+    hdrSub:"\u0623\u062f\u0627\u0629 \u0645\u0641\u062a\u0634 \u0645\u0639\u0631\u0636 \u0627\u0644\u0643\u062a\u0627\u0628",
+    formTitle:"\u0625\u0636\u0627\u0641\u0629 \u0625\u062f\u062e\u0627\u0644 \u062c\u062f\u064a\u062f",
+    lTitle:"\u0627\u0644\u0639\u0646\u0648\u0627\u0646",
+    lAuthor:"\u0627\u0644\u0643\u0627\u062a\u0628",
+    lPublisher:"\u062f\u0627\u0631 \u0627\u0644\u0646\u0634\u0631",
+    lCountry:"\u0627\u0644\u0628\u0644\u062f",
+    lIsbn:"ISBN",
+    pTitle:"\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u0643\u062a\u0627\u0628",
+    pAuthor:"\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u062a\u0628",
+    pPublisher:"\u0627\u0633\u0645 \u062f\u0627\u0631 \u0627\u0644\u0646\u0634\u0631",
+    pCountry:"\u0627\u0644\u0628\u0644\u062f",
+    pIsbn:"\u0645\u062b\u0627\u0644: 9780747532743",
+    btnSubmit:"\u2713 \u0625\u0636\u0627\u0641\u0629",
+    btnClear:"\u0645\u0633\u062d",
+    tblLabel:"\u0627\u0644\u0625\u062f\u062e\u0627\u0644\u0627\u062a \u0627\u0644\u0645\u0633\u062c\u0644\u0629",
+    btnExport:"\uD83D\uDCBE \u062a\u0635\u062f\u064a\u0631 Excel",
+    thNo:"\u0631\u0642\u0645",
+    thTitle:"\u0627\u0644\u0639\u0646\u0648\u0627\u0646",
+    thAuthor:"\u0627\u0644\u0643\u0627\u062a\u0628",
+    thPublisher:"\u062f\u0627\u0631 \u0627\u0644\u0646\u0634\u0631",
+    thCountry:"\u0627\u0644\u0628\u0644\u062f",
+    thIsbn:"ISBN",
+    langBtn:"\uD83C\uDF0D English",
+    emptyMsg:"\u0644\u0627 \u062a\u0648\u062c\u062f \u0625\u062f\u062e\u0627\u0644\u0627\u062a \u0628\u0639\u062f.\n\u0623\u0636\u0641 \u0623\u0648\u0644 \u0643\u062a\u0627\u0628 \u063a\u064a\u0631 \u0645\u0633\u062c\u0644 \u0623\u0639\u0644\u0627\u0647.",
+    entriesLbl:"\u0625\u062f\u062e\u0627\u0644",
+    errRequired:"\u064a\u0631\u062c\u0649 \u0645\u0644\u0621 \u062c\u0645\u064a\u0639 \u0627\u0644\u062d\u0642\u0648\u0644",
+    dupTitle:"\u0645\u0648\u062c\u0648\u062f \u0628\u0627\u0644\u0641\u0639\u0644 \u0641\u064a \u0627\u0644\u0642\u0627\u0626\u0645\u0629!",
+    dupSub:"\u0647\u0630\u0627 \u0627\u0644\u0640 ISBN \u0645\u0633\u062c\u0651\u0644 \u0645\u0633\u0628\u0642\u0627\u064b:",
+    dupClose:"\u062d\u0633\u0646\u0627\u064b",
+    saved:"\u062a\u0645 \u062d\u0641\u0638 \u0627\u0644\u0625\u062f\u062e\u0627\u0644",
+    deleted:"\u062a\u0645 \u062d\u0630\u0641 \u0627\u0644\u0625\u062f\u062e\u0627\u0644",
+    exported:"\u062a\u0645 \u062a\u0635\u062f\u064a\u0631 \u0645\u0644\u0641 Excel",
+    loading:"\u062c\u0627\u0631\u064a \u0627\u0644\u062a\u062d\u0645\u064a\u0644\u2026",
+    saving:"\u062c\u0627\u0631\u064a \u0627\u0644\u062d\u0641\u0638\u2026",
+    synced:"\u062a\u0645 \u0627\u0644\u062a\u062d\u0645\u064a\u0644",
+    loadErr:"\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062a\u062d\u0645\u064a\u0644 \u2014 \u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062a\u0635\u0627\u0644",
+    saveErr:"\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0641\u0638 \u2014 \u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649",
+    delErr:"\u062a\u0639\u0630\u0651\u0631 \u0627\u0644\u062d\u0630\u0641 \u2014 \u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649"
+  }
+};
+
+function t(k){ return (T[lang]&&T[lang][k]) || T.en[k] || k; }
+
+/* =================================================================
+   API
+   ================================================================= */
+function apiCall(action, data, cb) {
+  var payload = { action: action };
+  if (data) {
+    for (var k in data) { if (data.hasOwnProperty(k)) payload[k] = data[k]; }
+  }
+  var url = SCRIPT_URL + "?payload=" + encodeURIComponent(JSON.stringify(payload));
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", url, true);
+  xhr.timeout = 20000;
+  xhr.onload = function() {
+    try {
+      var res = JSON.parse(xhr.responseText);
+      if (res.error) { cb(res.error, null); } else { cb(null, res); }
+    } catch(e) { cb("Parse error", null); }
+  };
+  xhr.onerror   = function() { cb("Network error", null); };
+  xhr.ontimeout = function() { cb("Timeout", null); };
+  xhr.send();
+}
+
+/* =================================================================
+   UTILITIES
+   ================================================================= */
+var toastTimer;
+function showToast(msg) {
+  var el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ el.classList.remove("show"); }, 2600);
+}
+function setStatus(state, msg) {
+  document.getElementById("sDot").className = "s-dot" + (state ? " "+state : "");
+  document.getElementById("sMsg").textContent = msg;
+}
+function showLoader(msg) {
+  document.getElementById("loaderMsg").textContent = msg || t("loading");
+  document.getElementById("loader").classList.add("show");
+}
+function hideLoader() { document.getElementById("loader").classList.remove("show"); }
+
+/* =================================================================
+   LOAD
+   ================================================================= */
+function loadEntries() {
+  setStatus("loading", t("loading"));
+  apiCall("getAll", null, function(err, res) {
+    if (err) {
+      setStatus("error", t("loadErr"));
+      showToast(t("loadErr"));
+      return;
+    }
+    entries = res.entries || [];
+    setStatus("", t("synced") + " \u2014 " + entries.length + " " + t("entriesLbl"));
+    renderTable();
+  });
+}
+
+/* =================================================================
+   RENDER TABLE
+   ================================================================= */
+function renderTable() {
+  var tbody = document.getElementById("tableBody");
+  document.getElementById("totalBadge").textContent = entries.length + " " + t("entriesLbl");
+  tbody.innerHTML = "";
+
+  if (!entries.length) {
+    var tr = document.createElement("tr");
+    var td = document.createElement("td");
+    td.colSpan = 7;
+    td.innerHTML = '<div class="empty-table"><div class="empty-icon">&#128218;</div>' +
+      '<div class="empty-msg">' + t("emptyMsg").replace("\n","<br>") + '</div></div>';
+    tr.appendChild(td); tbody.appendChild(tr);
+    return;
+  }
+
+  for (var i = 0; i < entries.length; i++) {
+    (function(entry, idx) {
+      var tr = document.createElement("tr");
+      var cells = [String(idx+1), entry.title, entry.author, entry.publisher, entry.country, entry.isbn];
+      for (var j = 0; j < cells.length; j++) {
+        var td = document.createElement("td");
+        td.textContent = cells[j] || "";
+        tr.appendChild(td);
+      }
+      var tdDel = document.createElement("td");
+      var btn   = document.createElement("button");
+      btn.className = "del-row"; btn.textContent = "\u2715";
+      btn.addEventListener("click", function() {
+        var msg = lang === "ar"
+          ? "\u062d\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0625\u062f\u062e\u0627\u0644\u061f"
+          : "Delete this entry?";
+        if (!window.confirm(msg)) return;
+        deleteEntry(entry.id);
+      });
+      tdDel.appendChild(btn); tr.appendChild(tdDel);
+      tbody.appendChild(tr);
+    })(entries[i], i);
+  }
+}
+
+/* =================================================================
+   ADD ENTRY
+   ================================================================= */
+function addEntry() {
+  var fields = ["fTitle","fAuthor","fPublisher","fCountry","fIsbn"];
+  var vals   = {};
+  var valid  = true;
+
+  for (var i = 0; i < fields.length; i++) {
+    var el = document.getElementById(fields[i]);
+    el.classList.remove("err");
+    var v = el.value.trim();
+    if (!v) { el.classList.add("err"); valid = false; }
+    vals[fields[i]] = v;
+  }
+  if (!valid) { showToast(t("errRequired")); return; }
+
+  /* Duplicate ISBN check */
+  for (var j = 0; j < entries.length; j++) {
+    if (entries[j].isbn === vals.fIsbn) {
+      showDuplicate(vals.fIsbn);
+      return;
+    }
+  }
+
+  showLoader(t("saving"));
+  apiCall("addEntry", {
+    title:     vals.fTitle,
+    author:    vals.fAuthor,
+    publisher: vals.fPublisher,
+    country:   vals.fCountry,
+    isbn:      vals.fIsbn,
+    lang:      lang
+  }, function(err, res) {
+    hideLoader();
+    if (err) { showToast(t("saveErr")); return; }
+    entries.push({
+      id:        res.id,
+      title:     vals.fTitle,
+      author:    vals.fAuthor,
+      publisher: vals.fPublisher,
+      country:   vals.fCountry,
+      isbn:      vals.fIsbn,
+      lang:      lang
+    });
+    renderTable();
+    showToast(t("saved"));
+    setStatus("", t("synced") + " \u2014 " + entries.length + " " + t("entriesLbl"));
+    /* Clear form */
+    for (var k = 0; k < fields.length; k++) {
+      document.getElementById(fields[k]).value = "";
+      document.getElementById(fields[k]).classList.remove("err");
+    }
+    document.getElementById("fTitle").focus();
+  });
+}
+
+/* =================================================================
+   DELETE ENTRY
+   ================================================================= */
+function deleteEntry(id) {
+  showLoader();
+  apiCall("delEntry", { id: id }, function(err) {
+    hideLoader();
+    if (err) { showToast(t("delErr")); return; }
+    for (var i = 0; i < entries.length; i++) {
+      if (String(entries[i].id) === String(id)) { entries.splice(i, 1); break; }
+    }
+    renderTable();
+    showToast(t("deleted"));
+    setStatus("", t("synced") + " \u2014 " + entries.length + " " + t("entriesLbl"));
+  });
+}
+
+/* =================================================================
+   DUPLICATE MODAL
+   ================================================================= */
+function showDuplicate(isbn) {
+  document.getElementById("dupTitle").textContent = t("dupTitle");
+  document.getElementById("dupSub").textContent   = t("dupSub");
+  document.getElementById("dupClose").textContent = t("dupClose");
+  document.getElementById("dupIsbn").textContent  = isbn;
+  document.getElementById("dupModal").classList.add("open");
+}
+
+/* =================================================================
+   EXPORT TO EXCEL
+   ================================================================= */
+function exportExcel(exportLang) {
+  /* Initial check — will show more specific message after filtering */
+
+  var isAr = exportLang === "ar";
+
+  /* Filter entries to only those entered in this language */
+  var filtered = [];
+  for (var fi = 0; fi < entries.length; fi++) {
+    var entryLang = entries[fi].lang || "en";
+    if (entryLang === exportLang) filtered.push(entries[fi]);
+  }
+
+  if (!filtered.length) {
+    showToast(isAr ? "\u0644\u0627 \u062a\u0648\u062c\u062f \u0625\u062f\u062e\u0627\u0644\u0627\u062a \u0639\u0631\u0628\u064a\u0629" : "No English entries found");
+    return;
+  }
+
+  var headers = isAr
+    ? [
+        T.ar.thNo, T.ar.thTitle, T.ar.thAuthor,
+        T.ar.thPublisher, T.ar.thCountry, T.ar.thIsbn
+      ]
+    : [
+        T.en.thNo, T.en.thTitle, T.en.thAuthor,
+        T.en.thPublisher, T.en.thCountry, T.en.thIsbn
+      ];
+
+  var wsData = [headers];
+  for (var i = 0; i < filtered.length; i++) {
+    var e = filtered[i];
+    wsData.push([i+1, e.title, e.author, e.publisher, e.country, e.isbn]);
+  }
+
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws["!cols"] = [{wch:5},{wch:28},{wch:20},{wch:20},{wch:14},{wch:14}];
+
+  var sheetName = isAr
+    ? "\u0627\u0644\u0643\u062a\u0628 \u063a\u064a\u0631 \u0627\u0644\u0645\u0633\u062c\u0644\u0629"
+    : "Unregistered Books";
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+  var d = new Date();
+  var suffix = d.getFullYear()
+    + String(d.getMonth()+1).padStart(2,"0")
+    + String(d.getDate()).padStart(2,"0");
+  var fname = (isAr ? "الكتب_غير_المسجلة_" : "unregistered_books_") + suffix + ".xlsx";
+
+  XLSX.writeFile(wb, fname);
+  showToast(isAr ? T.ar.exported : T.en.exported);
+}
+
+/* =================================================================
+   LANGUAGE
+   ================================================================= */
+function applyLang() {
+  var isAr = lang === "ar";
+  document.documentElement.lang = lang;
+  document.documentElement.dir  = isAr ? "rtl" : "ltr";
+
+  document.getElementById("hdrTitle").textContent   = t("hdrTitle");
+  document.getElementById("hdrSub").textContent     = t("hdrSub");
+  document.getElementById("formTitle").textContent  = t("formTitle");
+  document.getElementById("lTitle").textContent     = t("lTitle");
+  document.getElementById("lAuthor").textContent    = t("lAuthor");
+  document.getElementById("lPublisher").textContent = t("lPublisher");
+  document.getElementById("lCountry").textContent   = t("lCountry");
+  document.getElementById("lIsbn").textContent      = t("lIsbn");
+  document.getElementById("btnSubmit").textContent  = t("btnSubmit");
+  document.getElementById("btnClear").textContent   = t("btnClear");
+  document.getElementById("tblLabel").textContent   = t("tblLabel");
+  document.getElementById("thNo").textContent       = t("thNo");
+  document.getElementById("thTitle").textContent    = t("thTitle");
+  document.getElementById("thAuthor").textContent   = t("thAuthor");
+  document.getElementById("thPublisher").textContent= t("thPublisher");
+  document.getElementById("thCountry").textContent  = t("thCountry");
+  document.getElementById("thIsbn").textContent     = t("thIsbn");
+  document.getElementById("btnLang").textContent    = t("langBtn");
+
+  document.getElementById("fTitle").placeholder     = t("pTitle");
+  document.getElementById("fAuthor").placeholder    = t("pAuthor");
+  document.getElementById("fPublisher").placeholder = t("pPublisher");
+  document.getElementById("fCountry").placeholder   = t("pCountry");
+  document.getElementById("fIsbn").placeholder      = t("pIsbn");
+
+  renderTable();
+}
+
+/* =================================================================
+   NUMBERS ONLY — ISBN
+   ================================================================= */
+function initIsbnField() {
+  var el = document.getElementById("fIsbn");
+  el.addEventListener("input", function() {
+    var pos     = this.selectionStart;
+    var cleaned = this.value.replace(/[^0-9]/g, "");
+    if (cleaned !== this.value) {
+      this.value = cleaned;
+      this.setSelectionRange(pos-1, pos-1);
+    }
+  });
+  el.addEventListener("keydown", function(e) {
+    var allowed = [8,9,13,27,46,37,38,39,40,35,36];
+    if (allowed.indexOf(e.keyCode) !== -1) return;
+    if ((e.ctrlKey||e.metaKey) && [65,67,86,88].indexOf(e.keyCode) !== -1) return;
+    if (e.key && e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault();
+  });
+  /* Submit on Enter */
+  el.addEventListener("keydown", function(e) {
+    if (e.keyCode === 13) addEntry();
+  });
+}
+
+/* =================================================================
+   INIT
+   ================================================================= */
+document.addEventListener("DOMContentLoaded", function() {
+
+  initIsbnField();
+
+  document.getElementById("btnLang").addEventListener("click", function() {
+    lang = lang === "en" ? "ar" : "en";
+    applyLang();
+  });
+
+  document.getElementById("btnSubmit").addEventListener("click", addEntry);
+  document.getElementById("btnClear").addEventListener("click", function() {
+    ["fTitle","fAuthor","fPublisher","fCountry","fIsbn"].forEach(function(id) {
+      var el = document.getElementById(id);
+      el.value = ""; el.classList.remove("err");
+    });
+  });
+
+  document.getElementById("btnExportEn").addEventListener("click", function() { exportExcel("en"); });
+  document.getElementById("btnExportAr").addEventListener("click", function() { exportExcel("ar"); });
+
+  document.getElementById("dupClose").addEventListener("click", function() {
+    document.getElementById("dupModal").classList.remove("open");
+  });
+  document.getElementById("dupModal").addEventListener("click", function(e) {
+    if (e.target === this) this.classList.remove("open");
+  });
+
+  loadEntries();
+});
+</script>
+</body>
+</html>
