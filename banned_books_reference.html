@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Banned Books Admin</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+/* ── HEADER ── */
+.hdr {
+  background: #c0392b;
+  color: #fff;
+  padding: 16px 16px 14px;
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.hdr-left { display: flex; align-items: center; gap: 10px; }
+.hdr-icon { font-size: 26px; line-height: 1; }
+.hdr h1 { font-size: 16px; font-weight: 700; }
+.hdr-sub { font-size: 11px; opacity: 0.82; margin-top: 2px; }
+
+.exp-btn {
+  background: rgba(255,255,255,0.95);
+  color: #c0392b;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── CARD PANELS ── */
+.panel {
+  background: #fff;
+  border-top: 1px solid #e0e0e5;
+  border-bottom: 1px solid #e0e0e5;
+  margin-bottom: 8px;
+}
+
+/* ── UPLOAD ROW ── */
+.upload-row {
+  padding: 10px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+/* iOS-safe select */
+.sel-wrap { position: relative; flex: 0 0 auto; min-width: 148px; }
+.sel-arrow {
+  position: absolute; right: 10px; top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none; font-size: 11px; color: #8e8e93;
+}
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  border: 1.5px solid #d1d1d6;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  border-radius: 10px;
+  padding: 12px 28px 12px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+select.err { border-color: #c0392b; background: #fdf0ef; }
+
+/* Title input */
+.title-in {
+  flex: 1;
+  min-width: 100px;
+  border: 1.5px solid #d1d1d6;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  border-radius: 10px;
+  padding: 12px 11px;
+  font-size: 16px;
+  outline: none;
+}
+.title-in::placeholder { color: #aeaeb2; }
+
+/* ── FILE PICK BUTTON ── */
+/* On iOS the ONLY reliable way to trigger file picker is a visible
+   <input type=file> that the user taps directly. We make it look like
+   a button by sizing it and making it transparent over a styled div.    */
+.pick-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.pick-face {
+  background: #c0392b;
+  color: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pick-input {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px; /* prevents iOS zoom */
+  z-index: 2;
+}
+
+/* ── NEW CATEGORY ROW ── */
+.newcat-row {
+  padding: 9px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  border-top: 1px solid #f0f0f5;
+}
+.newcat-label { font-size: 12px; color: #8e8e93; white-space: nowrap; flex-shrink: 0; }
+.newcat-in {
+  flex: 1; min-width: 0;
+  border: 1.5px solid #d1d1d6;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  border-radius: 10px;
+  padding: 9px 11px;
+  font-size: 16px;
+  outline: none;
+}
+.newcat-in::placeholder { color: #aeaeb2; }
+.newcat-btn {
+  background: #f2f2f7;
+  color: #1c1c1e;
+  border: 1.5px solid #d1d1d6;
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── TABS ── */
+.tabs-scroll {
+  background: #fff;
+  border-top: 1px solid #e0e0e5;
+  border-bottom: 1px solid #e0e0e5;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+  margin-bottom: 8px;
+}
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tab-inner { display: inline-flex; }
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 16px 10px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #8e8e93;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tab-btn.active { color: #c0392b; border-bottom-color: #c0392b; }
+.tab-pill {
+  background: #f2f2f7;
+  color: #8e8e93;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  min-width: 22px;
+  text-align: center;
+}
+.tab-btn.active .tab-pill { background: #fdf0ef; color: #c0392b; }
+
+/* ── SECTIONS ── */
+.section { display: none; }
+.section.active { display: block; }
+
+/* ── GRID ── */
+.grid-pad { padding: 12px; }
+.book-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+/* ── BOOK CARD ── */
+.book-card {
+  background: #fff;
+  border: 1px solid #e0e0e5;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+.book-img {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  display: block;
+  background: #f2f2f7;
+}
+.book-name {
+  padding: 7px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1c1c1e;
+  border-top: 1px solid #f0f0f5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.del-btn {
+  position: absolute;
+  top: 5px; right: 5px;
+  width: 26px; height: 26px;
+  background: rgba(192,57,43,0.88);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  /* Always visible on touch devices */
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 16px;
+  color: #aeaeb2;
+}
+.empty-icon { font-size: 42px; margin-bottom: 10px; }
+.empty-msg { font-size: 14px; line-height: 1.7; }
+
+/* ── MODAL (iOS export) ── */
+.modal-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0,0,0,0.5);
+  align-items: flex-end;
+  justify-content: center;
+}
+.modal-bg.open { display: flex; }
+.modal-box {
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  padding: 20px 16px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  width: 100%;
+  max-width: 580px;
+}
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.modal-desc { font-size: 13px; color: #636366; line-height: 1.6; margin-bottom: 12px; }
+.modal-ta {
+  width: 100%;
+  height: 90px;
+  border: 1.5px solid #d1d1d6;
+  border-radius: 10px;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  font-size: 11px;
+  font-family: "Courier New", monospace;
+  padding: 9px 10px;
+  resize: none;
+  outline: none;
+  margin-bottom: 12px;
+  /* Important: iOS needs this to allow text selection */
+  -webkit-user-select: text;
+  user-select: text;
+}
+.modal-btns { display: flex; gap: 8px; }
+.modal-btn {
+  flex: 1;
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.modal-btn-primary { background: #c0392b; color: #fff; }
+.modal-btn-secondary { background: #f2f2f7; color: #1c1c1e; }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: rgba(28,28,30,0.92);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.22s, transform 0.22s;
+  pointer-events: none;
+  z-index: 300;
+  white-space: nowrap;
+  max-width: 86vw;
+  text-align: center;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── LOADING ── */
+#loader {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  background: rgba(0,0,0,0.42);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+#loader.show { display: flex; }
+.spin {
+  width: 32px; height: 32px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%, 75% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+}
+.shake { animation: shake 0.35s ease; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-icon">&#128683;</div>
+    <div>
+      <h1>Banned Books &mdash; Admin</h1>
+      <div class="hdr-sub">Add books &bull; Export to share</div>
+    </div>
+  </div>
+  <button class="exp-btn" id="btnExport">&#128228; Export</button>
+</header>
+
+<!-- UPLOAD PANEL -->
+<div class="panel">
+  <div class="upload-row">
+    <!-- Category selector -->
+    <div class="sel-wrap">
+      <select id="selCat">
+        <option value="">&#8212; Category &#8212;</option>
+      </select>
+      <div class="sel-arrow">&#9660;</div>
+    </div>
+
+    <!-- Title -->
+    <input class="title-in" type="text" id="inTitle"
+           placeholder="Book title (optional)"
+           autocomplete="off" autocorrect="off" autocapitalize="words" />
+
+    <!-- File picker — real input overlaid on styled face -->
+    <div class="pick-wrap">
+      <div class="pick-face">&#65291; Add image</div>
+      <input class="pick-input" type="file" id="inFile"
+             accept="image/*" multiple />
+    </div>
+  </div>
+
+  <!-- New category -->
+  <div class="newcat-row">
+    <span class="newcat-label">New category:</span>
+    <input class="newcat-in" type="text" id="inNewCat"
+           placeholder="e.g. Graphic Novels"
+           maxlength="40"
+           autocomplete="off" autocorrect="off" autocapitalize="words" />
+    <button class="newcat-btn" id="btnAddCat">&#65291; Add</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-scroll">
+  <div class="tab-inner" id="tabRow"></div>
+</div>
+
+<!-- SECTIONS -->
+<div id="sectionsWrap"></div>
+
+<!-- iOS EXPORT MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal-box">
+    <div class="modal-title">&#128228; Share the reference file</div>
+    <div class="modal-desc">
+      Tap the box below &rarr; <strong>Select All</strong> &rarr; <strong>Copy</strong>.<br>
+      On a desktop: paste into a text editor, save as <code>banned_books_shared.html</code>, then send to inspectors.
+    </div>
+    <textarea class="modal-ta" id="exportText" readonly></textarea>
+    <div class="modal-btns">
+      <button class="modal-btn modal-btn-primary" id="btnCopy">Copy All</button>
+      <button class="modal-btn modal-btn-secondary" id="btnClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loader">
+  <div class="spin"></div>
+  <span id="loaderMsg">Saving&hellip;</span>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+/* =================================================================
+   STORAGE  —  pure synchronous localStorage, no IndexedDB, no async
+   ================================================================= */
+var STORAGE_BOOKS = "bbadmin_books";
+var STORAGE_CATS  = "bbadmin_cats";
+
+function storageGet(key) {
+  try {
+    var raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+function storageSet(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (e) { return false; }
+}
+
+function loadAllBooks() {
+  return storageGet(STORAGE_BOOKS) || [];
+}
+
+function saveAllBooks(arr) {
+  return storageSet(STORAGE_BOOKS, arr);
+}
+
+function loadCats() {
+  return storageGet(STORAGE_CATS) || [];
+}
+
+function saveCats(arr) {
+  storageSet(STORAGE_CATS, arr);
+}
+
+function getBooksForCat(catName) {
+  var all = loadAllBooks();
+  var out = [];
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].cat === catName) out.push(all[i]);
+  }
+  return out;
+}
+
+function addBookRecord(rec) {
+  var all = loadAllBooks();
+  rec.id = "b" + Date.now() + Math.floor(Math.random() * 9999);
+  all.push(rec);
+  var ok = saveAllBooks(all);
+  if (!ok) throw new Error("Storage full. Please remove some images.");
+  return rec.id;
+}
+
+function removeBookRecord(id) {
+  var all = loadAllBooks();
+  var next = [];
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].id !== id) next.push(all[i]);
+  }
+  saveAllBooks(next);
+}
+
+/* =================================================================
+   DEFAULT CATEGORIES
+   ================================================================= */
+var DEFAULT_CATS = [
+  { name: "manga",    label: "Manga",    icon: "M", order: 0 },
+  { name: "novels",   label: "Novels",   icon: "N", order: 1 },
+  { name: "comics",   label: "Comics",   icon: "C", order: 2 },
+  { name: "children", label: "Children", icon: "K", order: 3 }
+];
+
+/* emoji map shown in UI only — avoids encoding issues in stored JSON */
+var CAT_EMOJI = {
+  manga: "&#128214;",
+  novels: "&#128218;",
+  comics: "&#128172;",
+  children: "&#128102;"
+};
+function catEmoji(name) {
+  return CAT_EMOJI[name] || "&#128193;";
+}
+
+/* =================================================================
+   APP STATE
+   ================================================================= */
+var cats = [];
+var activeTab = "";
+
+function initCats() {
+  var saved = loadCats();
+  if (!saved || saved.length === 0) {
+    saveCats(DEFAULT_CATS);
+    cats = DEFAULT_CATS.slice();
+  } else {
+    cats = saved.slice().sort(function (a, b) {
+      return (a.order || 0) - (b.order || 0);
+    });
+  }
+}
+
+/* =================================================================
+   UTILITIES
+   ================================================================= */
+function htmlEsc(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+var toastTimer;
+function showToast(msg) {
+  var el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.classList.remove("show"); }, 2600);
+}
+
+function showLoader(msg) {
+  document.getElementById("loaderMsg").textContent = msg || "Working\u2026";
+  document.getElementById("loader").classList.add("show");
+}
+
+function hideLoader() {
+  document.getElementById("loader").classList.remove("show");
+}
+
+/* =================================================================
+   BUILD SELECT DROPDOWN
+   ================================================================= */
+function buildSelect() {
+  var sel = document.getElementById("selCat");
+  var cur = sel.value;
+  while (sel.options.length > 0) sel.remove(0);
+
+  var placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "\u2014 Category \u2014";
+  sel.appendChild(placeholder);
+
+  for (var i = 0; i < cats.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = cats[i].name;
+    opt.textContent = cats[i].label;
+    sel.appendChild(opt);
+  }
+
+  if (cur) {
+    for (var j = 0; j < cats.length; j++) {
+      if (cats[j].name === cur) { sel.value = cur; break; }
+    }
+  }
+}
+
+/* =================================================================
+   BUILD TABS & SECTIONS
+   ================================================================= */
+function buildTabs() {
+  var tabRow = document.getElementById("tabRow");
+  var wrap   = document.getElementById("sectionsWrap");
+
+  // Add any new section divs
+  for (var i = 0; i < cats.length; i++) {
+    var c = cats[i];
+    if (!document.getElementById("sec-" + c.name)) {
+      var secDiv = document.createElement("div");
+      secDiv.className = "section";
+      secDiv.id = "sec-" + c.name;
+
+      var padDiv = document.createElement("div");
+      padDiv.className = "grid-pad";
+
+      var gridDiv = document.createElement("div");
+      gridDiv.className = "book-grid";
+      gridDiv.id = "grid-" + c.name;
+
+      padDiv.appendChild(gridDiv);
+      secDiv.appendChild(padDiv);
+      wrap.appendChild(secDiv);
+    }
+  }
+
+  // Rebuild tab buttons
+  tabRow.innerHTML = "";
+  for (var k = 0; k < cats.length; k++) {
+    (function (cat) {
+      var btn = document.createElement("button");
+      btn.className = "tab-btn" + (activeTab === cat.name ? " active" : "");
+      btn.id = "tab-" + cat.name;
+
+      var emojiSpan = document.createElement("span");
+      emojiSpan.innerHTML = catEmoji(cat.name);
+
+      var labelSpan = document.createElement("span");
+      labelSpan.textContent = cat.label;
+
+      var pillSpan = document.createElement("span");
+      pillSpan.className = "tab-pill";
+      pillSpan.id = "pill-" + cat.name;
+      pillSpan.textContent = "0";
+
+      btn.appendChild(emojiSpan);
+      btn.appendChild(labelSpan);
+      btn.appendChild(pillSpan);
+
+      btn.addEventListener("click", function () { switchTab(cat.name); });
+      tabRow.appendChild(btn);
+    })(cats[k]);
+  }
+}
+
+function switchTab(name) {
+  activeTab = name;
+  for (var i = 0; i < cats.length; i++) {
+    var c   = cats[i];
+    var tab = document.getElementById("tab-" + c.name);
+    var sec = document.getElementById("sec-" + c.name);
+    if (tab) {
+      if (c.name === name) tab.classList.add("active");
+      else tab.classList.remove("active");
+    }
+    if (sec) {
+      if (c.name === name) sec.classList.add("active");
+      else sec.classList.remove("active");
+    }
+  }
+}
+
+/* =================================================================
+   RENDER GRID
+   ================================================================= */
+function renderGrid(catName) {
+  var items = getBooksForCat(catName);
+  var pill  = document.getElementById("pill-" + catName);
+  if (pill) pill.textContent = String(items.length);
+
+  var grid = document.getElementById("grid-" + catName);
+  if (!grid) return;
+
+  grid.innerHTML = "";
+
+  if (items.length === 0) {
+    var cat = null;
+    for (var i = 0; i < cats.length; i++) {
+      if (cats[i].name === catName) { cat = cats[i]; break; }
+    }
+    var empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML =
+      '<div class="empty-icon">' + catEmoji(catName) + '</div>' +
+      '<div class="empty-msg">No books yet.<br>Choose <strong>' +
+      htmlEsc(cat ? cat.label : catName) +
+      '</strong> above and tap <strong>+ Add image</strong>.</div>';
+    grid.appendChild(empty);
+    return;
+  }
+
+  for (var j = 0; j < items.length; j++) {
+    (function (item) {
+      var card = document.createElement("div");
+      card.className = "book-card";
+
+      var img = document.createElement("img");
+      img.className = "book-img";
+      img.src = item.src;
+      img.alt = item.title || "Cover";
+      img.loading = "lazy";
+
+      var name = document.createElement("div");
+      name.className = "book-name";
+      name.title = item.title || "";
+      name.textContent = item.title || "Untitled";
+
+      var del = document.createElement("button");
+      del.className = "del-btn";
+      del.textContent = "\u2715";
+      del.addEventListener("click", function () {
+        if (window.confirm("Remove this book?")) {
+          removeBookRecord(item.id);
+          renderGrid(catName);
+          showToast("Removed");
+        }
+      });
+
+      card.appendChild(img);
+      card.appendChild(name);
+      card.appendChild(del);
+      grid.appendChild(card);
+    })(items[j]);
+  }
+}
+
+function renderAll() {
+  for (var i = 0; i < cats.length; i++) {
+    renderGrid(cats[i].name);
+  }
+}
+
+/* =================================================================
+   ADD CATEGORY
+   ================================================================= */
+function addCategory() {
+  var input = document.getElementById("inNewCat");
+  var raw   = input.value.trim();
+  if (!raw) { input.focus(); return; }
+
+  var name = raw.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+  if (!name) { showToast("Invalid name"); return; }
+
+  for (var i = 0; i < cats.length; i++) {
+    if (cats[i].name === name) { showToast("Category already exists"); return; }
+  }
+
+  var label = raw.charAt(0).toUpperCase() + raw.slice(1);
+  var cat   = { name: name, label: label, icon: "F", order: cats.length };
+  cats.push(cat);
+  saveCats(cats);
+  input.value = "";
+
+  buildSelect();
+  buildTabs();
+  renderGrid(name);
+  switchTab(name);
+  showToast('"' + label + '" added');
+}
+
+/* =================================================================
+   UPLOAD HANDLER
+   ================================================================= */
+function handleFiles(fileList) {
+  var catName = document.getElementById("selCat").value;
+  var title   = document.getElementById("inTitle").value.trim();
+
+  if (!catName) {
+    var sel = document.getElementById("selCat");
+    sel.classList.add("err");
+    sel.classList.add("shake");
+    setTimeout(function () {
+      sel.classList.remove("shake");
+    }, 400);
+    showToast("Choose a category first");
+    return;
+  }
+
+  if (!fileList || fileList.length === 0) return;
+
+  var files = [];
+  for (var i = 0; i < fileList.length; i++) files.push(fileList[i]);
+
+  showLoader("Saving " + files.length + " image" + (files.length > 1 ? "s" : "") + "\u2026");
+
+  var index = 0;
+
+  function processNext() {
+    if (index >= files.length) {
+      document.getElementById("inTitle").value = "";
+      document.getElementById("inFile").value  = "";
+      renderGrid(catName);
+      switchTab(catName);
+      hideLoader();
+      showToast(files.length + " image" + (files.length > 1 ? "s" : "") + " saved");
+      return;
+    }
+
+    var file = files[index];
+    var t;
+    if (files.length === 1) {
+      t = title || file.name.replace(/\.[^.]+$/, "");
+    } else {
+      t = title
+        ? (title + (index > 0 ? " " + (index + 1) : ""))
+        : file.name.replace(/\.[^.]+$/, "");
+    }
+
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      /* Compress via canvas before saving — keeps file sizes small
+         and prevents iOS Safari from choking on huge inline Base64 */
+      var tempImg = new Image();
+      tempImg.onload = function () {
+        try {
+          var MAX = 600;
+          var scale = Math.min(MAX / tempImg.width, MAX / tempImg.height, 1);
+          var canvas = document.createElement("canvas");
+          canvas.width  = Math.round(tempImg.width  * scale);
+          canvas.height = Math.round(tempImg.height * scale);
+          var ctx = canvas.getContext("2d");
+          ctx.drawImage(tempImg, 0, 0, canvas.width, canvas.height);
+          var compressed = canvas.toDataURL("image/jpeg", 0.72);
+          addBookRecord({ cat: catName, title: t, src: compressed });
+          index++;
+          processNext();
+        } catch (err) {
+          hideLoader();
+          showToast(err.message);
+        }
+      };
+      tempImg.onerror = function () {
+        hideLoader();
+        showToast("Could not process image");
+      };
+      tempImg.src = ev.target.result;
+    };
+    reader.onerror = function () {
+      hideLoader();
+      showToast("Could not read file");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  processNext();
+}
+
+/* =================================================================
+   EXPORT
+   ================================================================= */
+function buildSharedHTML() {
+  var booksByCat = {};
+  var exportCats = [];
+
+  for (var i = 0; i < cats.length; i++) {
+    var items = getBooksForCat(cats[i].name);
+    if (items.length > 0) {
+      booksByCat[cats[i].name] = items;
+      exportCats.push(cats[i]);
+    }
+  }
+
+  var totalBooks = 0;
+  for (var ck in booksByCat) {
+    if (booksByCat.hasOwnProperty(ck)) totalBooks += booksByCat[ck].length;
+  }
+
+  if (totalBooks === 0) return null;
+
+  /* Build CSS as a variable */
+  var sharedCSS = ""
+    + "* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }\n"
+    + "body { font-family: -apple-system, BlinkMacSystemFont, Helvetica Neue, sans-serif;"
+    + " background: #f2f2f7; color: #1c1c1e; min-height: 100vh;"
+    + " padding-bottom: env(safe-area-inset-bottom, 20px); }\n"
+    + ".hdr { background: #c0392b; color: #fff; padding: 14px 14px;"
+    + " padding-top: calc(14px + env(safe-area-inset-top, 0px));"
+    + " display: flex; align-items: center; gap: 10px;"
+    + " position: sticky; top: 0; z-index: 10; }\n"
+    + ".hdr-icon { font-size: 24px; }\n"
+    + ".hdr h1 { font-size: 16px; font-weight: 700; }\n"
+    + ".hdr-sub { font-size: 11px; opacity: 0.8; margin-top: 2px; }\n"
+    + ".tabs-scroll { background: #fff; border-top: 1px solid #e0e0e5;"
+    + " border-bottom: 1px solid #e0e0e5; overflow-x: auto;"
+    + " -webkit-overflow-scrolling: touch; white-space: nowrap; margin-bottom: 8px; }\n"
+    + ".tabs-scroll::-webkit-scrollbar { display: none; }\n"
+    + ".tab-inner { display: inline-flex; }\n"
+    + ".tab-btn { display: inline-flex; align-items: center; gap: 5px;"
+    + " padding: 12px 16px 10px; background: none; border: none;"
+    + " border-bottom: 3px solid transparent; font-size: 14px; font-weight: 600;"
+    + " color: #8e8e93; cursor: pointer; white-space: nowrap; }\n"
+    + ".tab-btn.active { color: #c0392b; border-bottom-color: #c0392b; }\n"
+    + ".tab-pill { background: #f2f2f7; color: #8e8e93; font-size: 11px; font-weight: 700;"
+    + " padding: 2px 7px; border-radius: 99px; min-width: 22px; text-align: center; }\n"
+    + ".tab-btn.active .tab-pill { background: #fdf0ef; color: #c0392b; }\n"
+    + ".section { display: none; }\n"
+    + ".section.active { display: block; }\n"
+    + ".grid-pad { padding: 12px; }\n"
+    + ".book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }\n"
+    + ".book-card { background: #fff; border: 1px solid #e0e0e5; border-radius: 10px; overflow: hidden; }\n"
+    + ".book-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: #f2f2f7; }\n"
+    + ".book-name { padding: 7px 9px; font-size: 11px; font-weight: 600; color: #1c1c1e;"
+    + " border-top: 1px solid #f0f0f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n"
+    + ".badge { position: fixed; bottom: 16px; right: 16px; background: rgba(28,28,30,0.75);"
+    + " color: #fff; font-size: 11px; padding: 6px 12px; border-radius: 99px; pointer-events: none; }\n";
+
+  /* CATS is small — safe inline. BOOKS contains Base64 images so we
+     store it in a <script type="application/json"> tag instead of
+     injecting it into the JS execution context. Safari parses JSON
+     script tags as inert text — no script-size limits apply.        */
+  var catsData  = JSON.stringify(exportCats);
+  var booksData = JSON.stringify(booksByCat);
+
+  /* Viewer JS — reads data from JSON tag, uses DOMContentLoaded      */
+  var sharedJS = ""
+    + "var CATS = " + catsData + ";\n"
+    + "var BOOKS = {};\n"
+    + "var activeTab = '';\n"
+    + "\n"
+    + "function he(s) {\n"
+    + "  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');\n"
+    + "}\n"
+    + "\n"
+    + "function switchTab(name) {\n"
+    + "  activeTab = name;\n"
+    + "  for (var i = 0; i < CATS.length; i++) {\n"
+    + "    var tb = document.getElementById('t-' + CATS[i].name);\n"
+    + "    var sc = document.getElementById('s-' + CATS[i].name);\n"
+    + "    if (tb) { if (CATS[i].name === name) tb.classList.add('active'); else tb.classList.remove('active'); }\n"
+    + "    if (sc) { if (CATS[i].name === name) sc.classList.add('active'); else sc.classList.remove('active'); }\n"
+    + "  }\n"
+    + "}\n"
+    + "\n"
+    + "document.addEventListener('DOMContentLoaded', function () {\n"
+    + "  /* Parse book data from the inert JSON tag — avoids huge inline script */\n"
+    + "  try {\n"
+    + "    var jsonEl = document.getElementById('bookData');\n"
+    + "    if (jsonEl) BOOKS = JSON.parse(jsonEl.textContent || jsonEl.innerHTML);\n"
+    + "  } catch (e) { BOOKS = {}; }\n"
+    + "\n"
+    + "  var tabInner = document.getElementById('tabInner');\n"
+    + "  var sectWrap = document.getElementById('sectWrap');\n"
+    + "  var total = 0;\n"
+    + "\n"
+    + "  for (var i = 0; i < CATS.length; i++) {\n"
+    + "    (function (cat) {\n"
+    + "      var items = BOOKS[cat.name] || [];\n"
+    + "      total += items.length;\n"
+    + "\n"
+    + "      var btn = document.createElement('button');\n"
+    + "      btn.className = 'tab-btn';\n"
+    + "      btn.id = 't-' + cat.name;\n"
+    + "      btn.innerHTML = cat.label + ' <span class=\"tab-pill\">' + items.length + '</span>';\n"
+    + "      btn.onclick = function () { switchTab(cat.name); };\n"
+    + "      tabInner.appendChild(btn);\n"
+    + "\n"
+    + "      var sec = document.createElement('div');\n"
+    + "      sec.className = 'section';\n"
+    + "      sec.id = 's-' + cat.name;\n"
+    + "\n"
+    + "      var pad = document.createElement('div');\n"
+    + "      pad.className = 'grid-pad';\n"
+    + "\n"
+    + "      var grid = document.createElement('div');\n"
+    + "      grid.className = 'book-grid';\n"
+    + "\n"
+    + "      for (var j = 0; j < items.length; j++) {\n"
+    + "        var b = items[j];\n"
+    + "        var card = document.createElement('div');\n"
+    + "        card.className = 'book-card';\n"
+    + "\n"
+    + "        var img = document.createElement('img');\n"
+    + "        img.className = 'book-img';\n"
+    + "        img.src = b.src;\n"
+    + "        img.alt = b.title || 'Cover';\n"
+    + "        img.setAttribute('loading', 'lazy');\n"
+    + "\n"
+    + "        var nm = document.createElement('div');\n"
+    + "        nm.className = 'book-name';\n"
+    + "        nm.title = b.title || '';\n"
+    + "        nm.textContent = b.title || 'Untitled';\n"
+    + "\n"
+    + "        card.appendChild(img);\n"
+    + "        card.appendChild(nm);\n"
+    + "        grid.appendChild(card);\n"
+    + "      }\n"
+    + "\n"
+    + "      pad.appendChild(grid);\n"
+    + "      sec.appendChild(pad);\n"
+    + "      sectWrap.appendChild(sec);\n"
+    + "    })(CATS[i]);\n"
+    + "  }\n"
+    + "\n"
+    + "  var total2 = 0;\n"
+    + "  for (var k in BOOKS) { if (BOOKS.hasOwnProperty(k)) total2 += BOOKS[k].length; }\n"
+    + "  document.getElementById('badge').textContent = total2 + ' books';\n"
+    + "  if (CATS.length > 0) switchTab(CATS[0].name);\n"
+    + "});\n";
+
+  var html = ""
+    + "<!DOCTYPE html>\n"
+    + "<html lang=\"en\">\n"
+    + "<head>\n"
+    + "<meta charset=\"UTF-8\">\n"
+    + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, viewport-fit=cover\">\n"
+    + "<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n"
+    + "<title>Banned Books Reference</title>\n"
+    + "<style>\n"
+    + sharedCSS
+    + "</style>\n"
+    + "</head>\n"
+    + "<body>\n"
+    + "<header class=\"hdr\">\n"
+    + "  <div class=\"hdr-icon\">&#128683;</div>\n"
+    + "  <div><h1>Banned Books Reference</h1><div class=\"hdr-sub\">Field inspector &mdash; read only</div></div>\n"
+    + "</header>\n"
+    + "<div class=\"tabs-scroll\"><div class=\"tab-inner\" id=\"tabInner\"></div></div>\n"
+    + "<div id=\"sectWrap\"></div>\n"
+    + "<div class=\"badge\" id=\"badge\"></div>\n"
+    + "<!-- Book image data stored as inert JSON — not parsed as JS, no size limits -->\n"
+    + "<script type=\"application/json\" id=\"bookData\">\n"
+    + booksData + "\n"
+    + "<" + "/script>\n"
+    + "<script>\n"
+    + sharedJS
+    + "<" + "/script>\n"
+    + "</body>\n"
+    + "</html>";
+
+  return { html: html, total: totalBooks, catCount: exportCats.length };
+}
+
+function doExport() {
+  showLoader("Building export\u2026");
+
+  setTimeout(function () {
+    try {
+      var result = buildSharedHTML();
+      if (!result) {
+        hideLoader();
+        showToast("No books added yet");
+        return;
+      }
+
+      var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase())
+        || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+      if (isIOS) {
+        document.getElementById("exportText").value = result.html;
+        document.getElementById("modalBg").classList.add("open");
+      } else {
+        var blob = new Blob([result.html], { type: "text/html" });
+        var url  = URL.createObjectURL(blob);
+        var a    = document.createElement("a");
+        a.href     = url;
+        a.download = "banned_books_shared.html";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 3000);
+        showToast("Exported " + result.total + " books");
+      }
+    } catch (err) {
+      showToast("Export error: " + err.message);
+    }
+    hideLoader();
+  }, 60);
+}
+
+function doCopy() {
+  var ta = document.getElementById("exportText");
+  ta.focus();
+  ta.setSelectionRange(0, ta.value.length);
+  var ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+  if (ok) {
+    showToast("Copied! Paste into a .html file");
+  } else if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(ta.value).then(function () {
+      showToast("Copied to clipboard");
+    }).catch(function () {
+      showToast("Long-press the box, Select All, then Copy");
+    });
+  } else {
+    showToast("Long-press the box, Select All, then Copy");
+  }
+}
+
+/* =================================================================
+   INIT  — everything in window.onload, nothing runs before DOM ready
+   ================================================================= */
+window.onload = function () {
+
+  /* Check localStorage is available */
+  try {
+    localStorage.setItem("_bb_test", "1");
+    localStorage.removeItem("_bb_test");
+  } catch (e) {
+    document.body.innerHTML =
+      "<div style='padding:2rem;font-family:sans-serif;color:#c0392b'>"
+      + "<strong>Storage not available.</strong><br><br>"
+      + "On iPhone: open this file in Safari (not Chrome or in-app browser).<br>"
+      + "Make sure you're not in Private Browsing mode.</div>";
+    return;
+  }
+
+  /* Load or create categories */
+  initCats();
+
+  /* Build UI */
+  buildSelect();
+  buildTabs();
+  renderAll();
+  if (cats.length > 0) switchTab(cats[0].name);
+
+  /* Wire events */
+  document.getElementById("selCat").addEventListener("change", function () {
+    this.classList.remove("err");
+    if (this.value) switchTab(this.value);
+  });
+
+  document.getElementById("inFile").addEventListener("change", function () {
+    if (this.files && this.files.length > 0) {
+      handleFiles(this.files);
+    }
+  });
+
+  document.getElementById("btnAddCat").addEventListener("click", addCategory);
+
+  document.getElementById("inNewCat").addEventListener("keydown", function (e) {
+    if (e.keyCode === 13) { this.blur(); addCategory(); }
+  });
+
+  document.getElementById("btnExport").addEventListener("click", doExport);
+  document.getElementById("btnCopy").addEventListener("click", doCopy);
+  document.getElementById("btnClose").addEventListener("click", function () {
+    document.getElementById("modalBg").classList.remove("open");
+  });
+
+  /* Close modal on background tap */
+  document.getElementById("modalBg").addEventListener("click", function (e) {
+    if (e.target === this) this.classList.remove("open");
+  });
+};
+</script>
+</body>
+</html>
