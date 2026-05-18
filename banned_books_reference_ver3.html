@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Banned Books Admin</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;background:#f2f2f7;color:#1c1c1e;min-height:100vh;padding-bottom:40px}
+
+.hdr{background:#c0392b;color:#fff;padding:16px 16px 14px;padding-top:calc(16px + env(safe-area-inset-top,0px));display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hdr-left{display:flex;align-items:center;gap:10px}
+.hdr-icon{font-size:24px;line-height:1}
+.hdr h1{font-size:16px;font-weight:700}
+.hdr-sub{font-size:11px;opacity:.82;margin-top:2px}
+.hdr-btns{display:flex;gap:8px;flex-shrink:0}
+.hdr-btn{background:rgba(255,255,255,.95);color:#c0392b;border:none;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+
+.panel{background:#fff;border-top:1px solid #e0e0e5;border-bottom:1px solid #e0e0e5;margin-bottom:8px}
+
+/* SETUP SCREEN */
+#setupScreen{padding:24px 16px}
+#setupScreen h2{font-size:18px;font-weight:700;margin-bottom:8px}
+#setupScreen p{font-size:14px;color:#636366;line-height:1.6;margin-bottom:16px}
+.setup-field{margin-bottom:14px}
+.setup-field label{display:block;font-size:13px;font-weight:600;color:#636366;margin-bottom:6px}
+.setup-field input{width:100%;border:1.5px solid #d1d1d6;background:#f2f2f7;color:#1c1c1e;border-radius:10px;padding:12px;font-size:15px;outline:none;font-family:monospace}
+.setup-field input:focus{border-color:#c0392b}
+.setup-btn{width:100%;background:#c0392b;color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:4px}
+.setup-note{font-size:12px;color:#8e8e93;margin-top:12px;line-height:1.6}
+
+/* UPLOAD ROW */
+.upload-row{padding:10px 12px;display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.sel-wrap{position:relative;flex:0 0 auto;min-width:148px}
+.sel-arrow{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;font-size:11px;color:#8e8e93}
+select{-webkit-appearance:none;appearance:none;width:100%;border:1.5px solid #d1d1d6;background:#f2f2f7;color:#1c1c1e;border-radius:10px;padding:12px 28px 12px 12px;font-size:16px;font-weight:600;outline:none;cursor:pointer}
+select.err{border-color:#c0392b;background:#fdf0ef}
+.title-in{flex:1;min-width:100px;border:1.5px solid #d1d1d6;background:#f2f2f7;color:#1c1c1e;border-radius:10px;padding:12px 11px;font-size:16px;outline:none}
+.title-in::placeholder{color:#aeaeb2}
+.pick-wrap{position:relative;flex-shrink:0}
+.pick-face{background:#c0392b;color:#fff;border-radius:10px;padding:12px 14px;font-size:14px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:5px;user-select:none;-webkit-user-select:none}
+.pick-input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:16px;z-index:2}
+
+.newcat-row{padding:9px 12px;display:flex;gap:8px;align-items:center;border-top:1px solid #f0f0f5}
+.newcat-label{font-size:12px;color:#8e8e93;white-space:nowrap;flex-shrink:0}
+.newcat-in{flex:1;min-width:0;border:1.5px solid #d1d1d6;background:#f2f2f7;color:#1c1c1e;border-radius:10px;padding:9px 11px;font-size:16px;outline:none}
+.newcat-in::placeholder{color:#aeaeb2}
+.newcat-btn{background:#f2f2f7;color:#1c1c1e;border:1.5px solid #d1d1d6;border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+
+.sync-bar{background:#eaf4ff;border-bottom:1px solid #b8d9f8;padding:8px 14px;font-size:12px;color:#1a6fa8;display:flex;align-items:center;gap:8px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#34c759;flex-shrink:0}
+.sync-dot.saving{background:#ff9500}
+.sync-dot.error{background:#ff3b30}
+
+.tabs-scroll{background:#fff;border-top:1px solid #e0e0e5;border-bottom:1px solid #e0e0e5;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;margin-bottom:8px}
+.tabs-scroll::-webkit-scrollbar{display:none}
+.tab-inner{display:inline-flex}
+.tab-btn{display:inline-flex;align-items:center;gap:5px;padding:12px 16px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:14px;font-weight:600;color:#8e8e93;white-space:nowrap;cursor:pointer}
+.tab-btn.active{color:#c0392b;border-bottom-color:#c0392b}
+.tab-pill{background:#f2f2f7;color:#8e8e93;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;min-width:22px;text-align:center}
+.tab-btn.active .tab-pill{background:#fdf0ef;color:#c0392b}
+
+.section{display:none}.section.active{display:block}
+.grid-pad{padding:12px}
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.book-card{background:#fff;border:1px solid #e0e0e5;border-radius:10px;overflow:hidden;position:relative}
+.book-img{width:100%;aspect-ratio:2/3;object-fit:cover;display:block;background:#f2f2f7}
+.book-name{padding:7px 9px;font-size:11px;font-weight:600;color:#1c1c1e;border-top:1px solid #f0f0f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.del-btn{position:absolute;top:5px;right:5px;width:26px;height:26px;background:rgba(192,57,43,.88);color:#fff;border:none;border-radius:50%;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+
+.empty-state{grid-column:1/-1;text-align:center;padding:40px 16px;color:#aeaeb2}
+.empty-icon{font-size:42px;margin-bottom:10px}
+.empty-msg{font-size:14px;line-height:1.7}
+
+#loader{display:none;position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.45);align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;font-size:15px;font-weight:600}
+#loader.show{display:flex}
+.spin{width:32px;height:32px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#toast{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(12px);background:rgba(28,28,30,.92);color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;font-weight:500;opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;z-index:300;white-space:nowrap;max-width:86vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@keyframes shake{0%,100%{transform:translateX(0)}25%,75%{transform:translateX(-6px)}50%{transform:translateX(6px)}}
+.shake{animation:shake .35s ease}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-icon">&#128683;</div>
+    <div>
+      <h1>Banned Books &mdash; Admin</h1>
+      <div class="hdr-sub" id="hdrSub">Loading&hellip;</div>
+    </div>
+  </div>
+  <div class="hdr-btns">
+    <button class="hdr-btn" id="btnSync">&#8593; Sync</button>
+    <button class="hdr-btn" id="btnSettings">&#9881;</button>
+  </div>
+</header>
+
+<!-- SETUP SCREEN -->
+<div id="setupScreen" style="display:none">
+  <h2>&#128274; GitHub Setup</h2>
+  <p>This app saves book data directly to your GitHub repo so every device sees the same books automatically.</p>
+  <div class="setup-field">
+    <label>GitHub Username</label>
+    <input type="text" id="cfgUser" placeholder="e.g. qtrgamer85-maker" autocomplete="off" autocorrect="off" autocapitalize="none"/>
+  </div>
+  <div class="setup-field">
+    <label>Repository Name</label>
+    <input type="text" id="cfgRepo" placeholder="e.g. bookfair-database" autocomplete="off" autocorrect="off" autocapitalize="none"/>
+  </div>
+  <div class="setup-field">
+    <label>Personal Access Token</label>
+    <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" autocorrect="off" autocapitalize="none"/>
+  </div>
+  <button class="setup-btn" id="btnSaveSetup">Save &amp; Connect</button>
+  <div class="setup-note">
+    &#128274; Your token is stored only in this browser's localStorage and never sent anywhere except GitHub's own API.<br><br>
+    Token needs <strong>repo</strong> scope. Generate at GitHub &#8594; Settings &#8594; Developer settings &#8594; Personal access tokens.
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="mainApp" style="display:none">
+  <div class="panel">
+    <div class="upload-row">
+      <div class="sel-wrap">
+        <select id="selCat"><option value="">&#8212; Category &#8212;</option></select>
+        <div class="sel-arrow">&#9660;</div>
+      </div>
+      <input class="title-in" type="text" id="inTitle" placeholder="Book title (optional)" autocomplete="off" autocorrect="off" autocapitalize="words"/>
+      <div class="pick-wrap">
+        <div class="pick-face">&#65291; Add image</div>
+        <input class="pick-input" type="file" id="inFile" accept="image/*" multiple/>
+      </div>
+    </div>
+    <div class="newcat-row">
+      <span class="newcat-label">New category:</span>
+      <input class="newcat-in" type="text" id="inNewCat" placeholder="e.g. Graphic Novels" maxlength="40" autocomplete="off" autocorrect="off" autocapitalize="words"/>
+      <button class="newcat-btn" id="btnAddCat">&#65291; Add</button>
+    </div>
+  </div>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncMsg">Ready</span>
+  </div>
+
+  <div class="tabs-scroll"><div class="tab-inner" id="tabRow"></div></div>
+  <div id="sectionsWrap"></div>
+</div>
+
+<div id="loader"><div class="spin"></div><span id="loaderMsg">Working&hellip;</span></div>
+<div id="toast"></div>
+
+<script>
+/* =================================================================
+   CONFIG — stored in localStorage on admin device only
+   ================================================================= */
+var CFG_KEY = "bb_github_cfg";
+var DATA_FILE = "books_data.json";
+
+function loadCfg() {
+  try { return JSON.parse(localStorage.getItem(CFG_KEY) || "null"); } catch(e) { return null; }
+}
+function saveCfg(cfg) {
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+}
+
+/* =================================================================
+   GITHUB API
+   ================================================================= */
+function apiUrl(cfg, path) {
+  return "https://api.github.com/repos/" + cfg.user + "/" + cfg.repo + "/contents/" + path;
+}
+
+function ghGet(cfg, path, cb) {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", apiUrl(cfg, path), true);
+  xhr.setRequestHeader("Authorization", "token " + cfg.token);
+  xhr.setRequestHeader("Accept", "application/vnd.github.v3+json");
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      try { cb(null, JSON.parse(xhr.responseText)); }
+      catch(e) { cb("Parse error"); }
+    } else if (xhr.status === 404) {
+      cb(null, null); // file doesn't exist yet
+    } else {
+      cb("GitHub error " + xhr.status);
+    }
+  };
+  xhr.onerror = function() { cb("Network error"); };
+  xhr.send();
+}
+
+function ghPut(cfg, path, content, sha, cb) {
+  var body = JSON.stringify({
+    message: "Update " + path,
+    content: btoa(unescape(encodeURIComponent(content))),
+    sha: sha || undefined
+  });
+  var xhr = new XMLHttpRequest();
+  xhr.open("PUT", apiUrl(cfg, path), true);
+  xhr.setRequestHeader("Authorization", "token " + cfg.token);
+  xhr.setRequestHeader("Accept", "application/vnd.github.v3+json");
+  xhr.setRequestHeader("Content-Type", "application/json");
+  xhr.onload = function() {
+    if (xhr.status === 200 || xhr.status === 201) {
+      try { cb(null, JSON.parse(xhr.responseText)); }
+      catch(e) { cb("Parse error"); }
+    } else {
+      cb("GitHub error " + xhr.status + ": " + xhr.responseText);
+    }
+  };
+  xhr.onerror = function() { cb("Network error"); };
+  xhr.send(body);
+}
+
+/* =================================================================
+   DATA MODEL
+   data = { cats: [...], books: { catName: [{id,title,src},...] } }
+   ================================================================= */
+var DEFAULT_CATS = [
+  {name:"manga",    label:"Manga",    order:0},
+  {name:"novels",   label:"Novels",   order:1},
+  {name:"comics",   label:"Comics",   order:2},
+  {name:"children", label:"Children", order:3}
+];
+
+var appData = { cats: [], books: {} };
+var currentSha = null; // SHA of the file on GitHub, needed for updates
+var cfg = null;
+var cats = [];
+var activeTab = "";
+var saveTimer = null;
+
+/* =================================================================
+   UTILITIES
+   ================================================================= */
+var toastTimer;
+function showToast(msg) {
+  var el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { el.classList.remove("show"); }, 2800);
+}
+function showLoader(msg) {
+  document.getElementById("loaderMsg").textContent = msg || "Working\u2026";
+  document.getElementById("loader").classList.add("show");
+}
+function hideLoader() {
+  document.getElementById("loader").classList.remove("show");
+}
+function setSyncStatus(state, msg) {
+  var dot = document.getElementById("syncDot");
+  var txt = document.getElementById("syncMsg");
+  dot.className = "sync-dot" + (state ? " " + state : "");
+  txt.textContent = msg;
+}
+
+/* =================================================================
+   LOCAL BACKUP — cache appData in localStorage so a bad GitHub
+   response can never wipe local work
+   ================================================================= */
+var LOCAL_BACKUP_KEY = "bb_local_backup";
+function saveLocalBackup() {
+  try { localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(appData)); } catch(e) {}
+}
+function loadLocalBackup() {
+  try { var r = localStorage.getItem(LOCAL_BACKUP_KEY); return r ? JSON.parse(r) : null; } catch(e) { return null; }
+}
+function countBooks(data) {
+  var n = 0;
+  if (!data || !data.books) return 0;
+  for (var k in data.books) { if (data.books.hasOwnProperty(k)) n += data.books[k].length; }
+  return n;
+}
+/* Merge remote into local — never drops books that exist locally */
+function mergeData(local, remote) {
+  var merged = { cats: [], books: {} };
+  var catMap = {};
+  var allCats = (local.cats || []).concat(remote.cats || []);
+  for (var i = 0; i < allCats.length; i++) { if (!catMap[allCats[i].name]) catMap[allCats[i].name] = allCats[i]; }
+  for (var ck in catMap) { if (catMap.hasOwnProperty(ck)) merged.cats.push(catMap[ck]); }
+  merged.cats.sort(function(a,b){ return (a.order||0)-(b.order||0); });
+  var catNames = [];
+  for (var cm in catMap) { if (catMap.hasOwnProperty(cm)) catNames.push(cm); }
+  for (var ci = 0; ci < catNames.length; ci++) {
+    var cat = catNames[ci];
+    var lb = (local.books  && local.books[cat])  ? local.books[cat]  : [];
+    var rb = (remote.books && remote.books[cat]) ? remote.books[cat] : [];
+    var idMap = {};
+    var combined = lb.concat(rb);
+    for (var bi = 0; bi < combined.length; bi++) { if (!idMap[combined[bi].id]) idMap[combined[bi].id] = combined[bi]; }
+    merged.books[cat] = [];
+    for (var id in idMap) { if (idMap.hasOwnProperty(id)) merged.books[cat].push(idMap[id]); }
+  }
+  return merged;
+}
+
+/* =================================================================
+   LOAD DATA FROM GITHUB — merges with local, never replaces
+   ================================================================= */
+function loadFromGitHub(cb) {
+  setSyncStatus("saving", "Loading from GitHub\u2026");
+  ghGet(cfg, DATA_FILE, function(err, res) {
+    if (err) {
+      setSyncStatus("error", "Load failed: " + err);
+      var backup = loadLocalBackup();
+      if (backup) { appData = backup; cats = appData.cats.slice().sort(function(a,b){ return (a.order||0)-(b.order||0); }); setSyncStatus("error", "Offline \u2014 showing local data"); }
+      if (cb) cb(err);
+      return;
+    }
+    if (!res) {
+      if (countBooks(appData) === 0) { appData = { cats: DEFAULT_CATS.slice(), books: {} }; }
+      currentSha = null;
+      setSyncStatus("", "New repo \u2014 ready");
+    } else {
+      currentSha = res.sha;
+      try {
+        var json = decodeURIComponent(escape(atob(res.content.replace(/\n/g,""))));
+        var remote = JSON.parse(json);
+        if (!remote.cats)  remote.cats  = DEFAULT_CATS.slice();
+        if (!remote.books) remote.books = {};
+        appData = mergeData(appData, remote);
+        saveLocalBackup();
+        setSyncStatus("", "Synced \u2014 " + countBooks(appData) + " books");
+      } catch(e) {
+        setSyncStatus("error", "Parse error \u2014 kept local data");
+        if (countBooks(appData) === 0) { var b = loadLocalBackup(); if (b) appData = b; }
+      }
+    }
+    cats = appData.cats.slice().sort(function(a,b){ return (a.order||0)-(b.order||0); });
+    if (cb) cb(null);
+  });
+}
+
+/* =================================================================
+   SAVE DATA TO GITHUB  (debounced — waits 1.5s after last change)
+   ================================================================= */
+function scheduleSave() {
+  /* Always save locally first so data is never lost */
+  saveLocalBackup();
+  setSyncStatus("saving", "Saving\u2026");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function() { pushToGitHub(); }, 1500);
+}
+
+function pushToGitHub(cb) {
+  setSyncStatus("saving", "Saving to GitHub\u2026");
+  var content = JSON.stringify(appData, null, 2);
+  ghPut(cfg, DATA_FILE, content, currentSha, function(err, res) {
+    if (err) {
+      setSyncStatus("error", "Save failed \u2014 " + err);
+      showToast("Save failed: " + err);
+      if (cb) cb(err);
+      return;
+    }
+    currentSha = res.content.sha;
+    saveLocalBackup(); /* update backup with confirmed saved state */
+    setSyncStatus("", "Saved \u2014 " + countBooks(appData) + " books");
+    if (cb) cb(null);
+  });
+}
+
+/* =================================================================
+   BUILD UI
+   ================================================================= */
+function buildSelect() {
+  var sel = document.getElementById("selCat");
+  var cur = sel.value;
+  while (sel.options.length > 0) sel.remove(0);
+  var ph = document.createElement("option");
+  ph.value = ""; ph.textContent = "\u2014 Category \u2014";
+  sel.appendChild(ph);
+  for (var i = 0; i < cats.length; i++) {
+    var opt = document.createElement("option");
+    opt.value = cats[i].name;
+    opt.textContent = cats[i].label;
+    sel.appendChild(opt);
+  }
+  if (cur) sel.value = cur;
+}
+
+function buildTabs() {
+  var tabRow = document.getElementById("tabRow");
+  var wrap   = document.getElementById("sectionsWrap");
+  for (var i = 0; i < cats.length; i++) {
+    var c = cats[i];
+    if (!document.getElementById("sec-" + c.name)) {
+      var secDiv = document.createElement("div");
+      secDiv.className = "section"; secDiv.id = "sec-" + c.name;
+      var padDiv = document.createElement("div"); padDiv.className = "grid-pad";
+      var gridDiv = document.createElement("div"); gridDiv.className = "book-grid"; gridDiv.id = "grid-" + c.name;
+      padDiv.appendChild(gridDiv); secDiv.appendChild(padDiv); wrap.appendChild(secDiv);
+    }
+  }
+  tabRow.innerHTML = "";
+  for (var k = 0; k < cats.length; k++) {
+    (function(cat) {
+      var btn = document.createElement("button");
+      btn.className = "tab-btn" + (activeTab === cat.name ? " active" : "");
+      btn.id = "tab-" + cat.name;
+      var lbl = document.createElement("span"); lbl.textContent = cat.label;
+      var pill = document.createElement("span"); pill.className = "tab-pill"; pill.id = "pill-" + cat.name; pill.textContent = "0";
+      btn.appendChild(lbl); btn.appendChild(pill);
+      btn.addEventListener("click", function() { switchTab(cat.name); });
+      tabRow.appendChild(btn);
+    })(cats[k]);
+  }
+}
+
+function switchTab(name) {
+  activeTab = name;
+  for (var i = 0; i < cats.length; i++) {
+    var tab = document.getElementById("tab-" + cats[i].name);
+    var sec = document.getElementById("sec-" + cats[i].name);
+    if (tab) { if (cats[i].name === name) tab.classList.add("active"); else tab.classList.remove("active"); }
+    if (sec) { if (cats[i].name === name) sec.classList.add("active"); else sec.classList.remove("active"); }
+  }
+}
+
+function renderGrid(catName) {
+  var items = appData.books[catName] || [];
+  var pill  = document.getElementById("pill-" + catName);
+  if (pill) pill.textContent = String(items.length);
+  var grid = document.getElementById("grid-" + catName);
+  if (!grid) return;
+  grid.innerHTML = "";
+  if (!items.length) {
+    var cat = null;
+    for (var i = 0; i < cats.length; i++) { if (cats[i].name === catName) { cat = cats[i]; break; } }
+    var empty = document.createElement("div"); empty.className = "empty-state";
+    empty.innerHTML = '<div class="empty-icon">&#128218;</div><div class="empty-msg">No books yet.<br>Choose <strong>' + (cat ? cat.label : catName) + '</strong> above and tap <strong>+ Add image</strong>.</div>';
+    grid.appendChild(empty);
+    return;
+  }
+  for (var j = 0; j < items.length; j++) {
+    (function(item, catN) {
+      var card = document.createElement("div"); card.className = "book-card";
+      var img = document.createElement("img"); img.className = "book-img"; img.src = item.src; img.alt = item.title || "Cover"; img.setAttribute("loading","lazy");
+      var nm = document.createElement("div"); nm.className = "book-name"; nm.title = item.title || ""; nm.textContent = item.title || "Untitled";
+      var del = document.createElement("button"); del.className = "del-btn"; del.textContent = "\u2715";
+      del.addEventListener("click", function() {
+        if (window.confirm("Remove this book?")) {
+          var arr = appData.books[catN] || [];
+          var next = [];
+          for (var x = 0; x < arr.length; x++) { if (arr[x].id !== item.id) next.push(arr[x]); }
+          appData.books[catN] = next;
+          renderGrid(catN);
+          scheduleSave();
+          showToast("Removed");
+        }
+      });
+      card.appendChild(img); card.appendChild(nm); card.appendChild(del);
+      grid.appendChild(card);
+    })(items[j], catName);
+  }
+}
+
+function renderAll() {
+  for (var i = 0; i < cats.length; i++) renderGrid(cats[i].name);
+}
+
+/* =================================================================
+   ADD CATEGORY
+   ================================================================= */
+function addCategory() {
+  var input = document.getElementById("inNewCat");
+  var raw   = input.value.trim();
+  if (!raw) { input.focus(); return; }
+  var name = raw.toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"");
+  if (!name) { showToast("Invalid name"); return; }
+  for (var i = 0; i < cats.length; i++) { if (cats[i].name === name) { showToast("Already exists"); return; } }
+  var label = raw.charAt(0).toUpperCase() + raw.slice(1);
+  var cat = { name: name, label: label, order: cats.length };
+  cats.push(cat);
+  appData.cats = cats.slice();
+  saveCfgCats();
+  input.value = "";
+  buildSelect(); buildTabs(); renderGrid(name); switchTab(name);
+  scheduleSave();
+  showToast('"' + label + '" added');
+}
+
+function saveCfgCats() {
+  appData.cats = cats.slice();
+}
+
+/* =================================================================
+   UPLOAD & COMPRESS
+   ================================================================= */
+function handleFiles(fileList) {
+  var catName = document.getElementById("selCat").value;
+  var title   = document.getElementById("inTitle").value.trim();
+  if (!catName) {
+    var sel = document.getElementById("selCat");
+    sel.classList.add("err","shake");
+    setTimeout(function() { sel.classList.remove("shake"); }, 400);
+    showToast("Choose a category first");
+    return;
+  }
+  if (!fileList || fileList.length === 0) return;
+  var files = [];
+  for (var i = 0; i < fileList.length; i++) files.push(fileList[i]);
+  showLoader("Processing " + files.length + " image" + (files.length > 1 ? "s" : "") + "\u2026");
+  var index = 0;
+  function next() {
+    if (index >= files.length) {
+      document.getElementById("inTitle").value = "";
+      document.getElementById("inFile").value  = "";
+      renderGrid(catName);
+      switchTab(catName);
+      hideLoader();
+      scheduleSave();
+      showToast(files.length + " image" + (files.length > 1 ? "s" : "") + " added \u2014 syncing\u2026");
+      return;
+    }
+    var file = files[index];
+    var t = files.length === 1
+      ? (title || file.name.replace(/\.[^.]+$/,""))
+      : (title ? title + (index > 0 ? " " + (index+1) : "") : file.name.replace(/\.[^.]+$/,""));
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var tempImg = new Image();
+      tempImg.onload = function() {
+        try {
+          var MAX = 600;
+          var scale = Math.min(MAX / tempImg.width, MAX / tempImg.height, 1);
+          var canvas = document.createElement("canvas");
+          canvas.width  = Math.round(tempImg.width  * scale);
+          canvas.height = Math.round(tempImg.height * scale);
+          canvas.getContext("2d").drawImage(tempImg, 0, 0, canvas.width, canvas.height);
+          var src = canvas.toDataURL("image/jpeg", 0.72);
+          var id  = "b" + Date.now() + Math.floor(Math.random() * 9999);
+          if (!appData.books[catName]) appData.books[catName] = [];
+          appData.books[catName].push({ id: id, title: t, src: src });
+          index++;
+          next();
+        } catch(err) { hideLoader(); showToast(err.message); }
+      };
+      tempImg.onerror = function() { hideLoader(); showToast("Could not process image"); };
+      tempImg.src = ev.target.result;
+    };
+    reader.onerror = function() { hideLoader(); showToast("Could not read file"); };
+    reader.readAsDataURL(file);
+  }
+  next();
+}
+
+/* =================================================================
+   SETUP SCREEN
+   ================================================================= */
+function showSetup() {
+  document.getElementById("mainApp").style.display    = "none";
+  document.getElementById("setupScreen").style.display = "block";
+  document.getElementById("hdrSub").textContent = "Setup required";
+  if (cfg) {
+    document.getElementById("cfgUser").value  = cfg.user  || "";
+    document.getElementById("cfgRepo").value  = cfg.repo  || "";
+    document.getElementById("cfgToken").value = cfg.token || "";
+  }
+}
+
+function showMain() {
+  document.getElementById("setupScreen").style.display = "none";
+  document.getElementById("mainApp").style.display     = "block";
+  document.getElementById("hdrSub").textContent = (cfg.user + "/" + cfg.repo);
+}
+
+function saveSetup() {
+  var user  = document.getElementById("cfgUser").value.trim();
+  var repo  = document.getElementById("cfgRepo").value.trim();
+  var token = document.getElementById("cfgToken").value.trim();
+  if (!user || !repo || !token) { showToast("Fill in all three fields"); return; }
+  cfg = { user: user, repo: repo, token: token };
+  saveCfg(cfg);
+  showMain();
+  showLoader("Connecting to GitHub\u2026");
+  loadFromGitHub(function(err) {
+    hideLoader();
+    if (err) { showToast("Could not connect: " + err); return; }
+    buildSelect(); buildTabs(); renderAll();
+    if (cats.length > 0) switchTab(cats[0].name);
+    showToast("Connected! " + cats.length + " categories loaded");
+  });
+}
+
+/* =================================================================
+   INIT
+   ================================================================= */
+document.addEventListener("DOMContentLoaded", function() {
+
+  cfg = loadCfg();
+
+  document.getElementById("btnSaveSetup").addEventListener("click", saveSetup);
+  document.getElementById("btnSettings").addEventListener("click", showSetup);
+  document.getElementById("btnSync").addEventListener("click", function() {
+    if (!cfg) { showSetup(); return; }
+    /* Save local backup before sync in case anything goes wrong */
+    saveLocalBackup();
+    var localCount = countBooks(appData);
+    showLoader("Syncing\u2026");
+    loadFromGitHub(function(err) {
+      hideLoader();
+      if (err) { showToast("Sync failed \u2014 local data kept"); return; }
+      var newCount = countBooks(appData);
+      buildSelect(); buildTabs(); renderAll();
+      if (cats.length > 0 && !activeTab) switchTab(cats[0].name);
+      if (newCount >= localCount) {
+        showToast("Synced \u2014 " + newCount + " books");
+      } else {
+        showToast("Merged: " + newCount + " books (was " + localCount + " locally)");
+      }
+    });
+  });
+
+  document.getElementById("selCat").addEventListener("change", function() {
+    this.classList.remove("err");
+    if (this.value) switchTab(this.value);
+  });
+
+  document.getElementById("inFile").addEventListener("change", function() {
+    if (this.files && this.files.length > 0) handleFiles(this.files);
+  });
+
+  document.getElementById("btnAddCat").addEventListener("click", addCategory);
+  document.getElementById("inNewCat").addEventListener("keydown", function(e) {
+    if (e.keyCode === 13) { this.blur(); addCategory(); }
+  });
+
+  if (!cfg) {
+    showSetup();
+    return;
+  }
+
+  showMain();
+  showLoader("Loading from GitHub\u2026");
+  loadFromGitHub(function(err) {
+    hideLoader();
+    if (err) { showToast("Load failed \u2014 check settings"); showSetup(); return; }
+    buildSelect(); buildTabs(); renderAll();
+    if (cats.length > 0) switchTab(cats[0].name);
+  });
+});
+</script>
+</body>
+</html>
